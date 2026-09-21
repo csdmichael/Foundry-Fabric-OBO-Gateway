@@ -2,43 +2,32 @@
 
 Enterprise On-Behalf-Of (OBO) integration gateway connecting **Microsoft Foundry** prompt agents and **Microsoft Copilot Studio** conversational agents to **Microsoft Fabric** Lakehouse tables and Fabric Data Agents under caller-delegated Microsoft Entra ID identity.
 
+**Table of contents**
+
+- [Architecture overview](#architecture-overview)
+- [Repository structure](#repository-structure)
+- [Getting started](#getting-started)
+- [Deployment](#deployment)
+- [Runbooks and detailed guides](#runbooks-and-detailed-guides)
+- [License](#license)
+
 ---
 
 ## Architecture Overview
 
-```
-                                      +-------------------------------------------------------+
-                                      |                 Microsoft Entra ID                    |
-                                      |    Caller Tenant: caldova37587778.onmicrosoft.com     |
-                                      +-------------------------------------------------------+
-                                              ^                         ^               ^
-                                  User Token  |             OAuth / OBO |   Client Cred |
-                                              v                         v               v
-+-------------------------------+   HTTPS    +------------------------------------+   HTTPS    +------------------------------+
-|    Microsoft Copilot Studio   | ---------> |      Azure API Management (APIM)   | <-------- |       Microsoft Foundry      |
-|    - Caldova Private (Env)    |            |      - caldova-apim-westus         |            |  - foundry-fabric-costops    |
-|    - Fabric Lakehouse Analyst |            |      - StandardV2 (Private VNet)   |            |  - fabric-costops (Project)  |
-|    - Fabric Data Agent Analyst|            +------------------------------------+            |  - gpt-5.6-sol (Model)       |
-+-------------------------------+                              |                               +------------------------------+
-                                                               | VNet Integration
-                                                               v
-                                             +------------------------------------+
-                                             |       Azure Functions Broker       |
-                                             |       - caldova-fabric-obo-fn      |
-                                             |       - Node 22 TypeScript         |
-                                             |       - MSAL Node OBO Exchange     |
-                                             +------------------------------------+
-                                                    |                      |
-                                     T-SQL over TDS |                      | REST API / MCP
-                                    (User Delegated)|                      | (User Delegated)
-                                                    v                      v
-                                     +--------------------------------------------+
-                                     |              Microsoft Fabric              |
-                                     |   Workspace: Fabric IQ Parts Shortages     |
-                                     |   Lakehouse: lh_part_shortages_v2          |
-                                     |   Data Agent: agent_part_shortages         |
-                                     +--------------------------------------------+
-```
+The solution has two Fabric-facing paths. Microsoft Foundry uses native Lakehouse knowledge and Fabric Data Agent integrations. Copilot Studio and optional MCP compatibility paths enter through private Azure API Management (APIM), which routes requests to the Azure Functions broker for MSAL OBO token exchange. The following views show the Fabric assets at the end of those paths.
+
+### Fabric Lakehouse
+
+![Fabric Lakehouse lh_part_shortages_v2 showing its governed Tables and Files](docs/images/01-fabric-lakehouse.png)
+
+The `lh_part_shortages_v2` Lakehouse is the governed data plane. Its `Files` area supplies approved content to Foundry IQ OneLake Knowledge, while its tables remain available through Fabric SQL endpoints. Native Foundry IQ ingestion and retrieval use managed identities; APIM-backed query paths preserve the caller's delegated identity through the OBO broker.
+
+### Fabric Data Agent
+
+![Published Fabric Data Agent agent_part_shortages with its Lakehouse schemas](docs/images/02-fabric-data-agent.png)
+
+The published `agent_part_shortages` Data Agent provides the conversational semantic layer over selected Lakehouse schemas and tables. Foundry invokes it through the first-class Fabric Data Agent tool, while Copilot Studio uses a private custom connector through APIM and the broker. Both user-facing query paths enforce the caller's Fabric permissions rather than substituting a shared application identity.
 
 ### Core Capabilities
 
@@ -171,7 +160,7 @@ Deploy using `scripts/deploy.ps1`:
 
 ---
 
-## Runbooks & Detailed Guides
+## Runbooks and Detailed Guides
 
 - **Microsoft Foundry**: Refer to [docs/foundry-obo.md](docs/foundry-obo.md) for step-by-step setup of Foundry IQ OneLake Knowledge, Fabric Data Agent tools, APIM OAuth connections, and agent orchestration.
 - **Microsoft Copilot Studio**: Refer to [docs/copilot-studio-private-obo.md](docs/copilot-studio-private-obo.md) for custom connector creation, maker connection authentication, solution import, invoker consent flow, and troubleshooting.
