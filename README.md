@@ -9,25 +9,26 @@ Enterprise On-Behalf-Of (OBO) integration gateway connecting **Microsoft Foundry
 - [Getting started](#getting-started)
 - [Deployment](#deployment)
 - [Runbooks and detailed guides](#runbooks-and-detailed-guides)
+- [Fabric UI reference](#fabric-ui-reference)
 - [License](#license)
 
 ---
 
 ## Architecture Overview
 
-The solution has two Fabric-facing paths. Microsoft Foundry uses native Lakehouse knowledge and Fabric Data Agent integrations. Copilot Studio and optional MCP compatibility paths enter through private Azure API Management (APIM), which routes requests to the Azure Functions broker for MSAL OBO token exchange. The following views show the Fabric assets at the end of those paths.
+The following diagrams show the two supported private integration patterns and how user identity is preserved when agents access Microsoft Fabric.
 
-### Fabric Lakehouse
+### Copilot Studio OBO Flow
 
-![Fabric Lakehouse lh_part_shortages_v2 showing its governed Tables and Files](docs/images/01-fabric-lakehouse.png)
+![Copilot Studio accessing private Microsoft Fabric through Fabric IQ and APIM with OBO](docs/Copilot-Studio-Private-Fabric-OBO-Architecture.png)
 
-The `lh_part_shortages_v2` Lakehouse is the governed data plane. Its `Files` area supplies approved content to Foundry IQ OneLake Knowledge, while its tables remain available through Fabric SQL endpoints. Native Foundry IQ ingestion and retrieval use managed identities; APIM-backed query paths preserve the caller's delegated identity through the OBO broker.
+Users enter through Microsoft 365 or a frontend application and interact with a Copilot Studio agent. The Fabric IQ Power Platform connector validates the caller's Microsoft Entra identity, performs the OBO token exchange, and sends the delegated request through APIM. APIM applies centralized security, routing, and monitoring policies before the request reaches private Fabric services and their connected data sources.
 
-### Fabric Data Agent
+### Private Copilot Studio and Foundry Integration
 
-![Published Fabric Data Agent agent_part_shortages with its Lakehouse schemas](docs/images/02-fabric-data-agent.png)
+![Private Copilot Studio and Microsoft Foundry integration with Fabric through APIM](docs/Foundry-Private-Fabric-OBO-Architecture.png)
 
-The published `agent_part_shortages` Data Agent provides the conversational semantic layer over selected Lakehouse schemas and tables. Foundry invokes it through the first-class Fabric Data Agent tool, while Copilot Studio uses a private custom connector through APIM and the broker. Both user-facing query paths enforce the caller's Fabric permissions rather than substituting a shared application identity.
+Private APIM provides the governed gateway for both Copilot Studio and Microsoft Foundry. Foundry agents use two complementary Fabric patterns in parallel: the Fabric Data Agent provides natural-language access to governed data, while OneLake supplies organizational knowledge for grounded responses. Entra OBO, managed identities, private networking, transport encryption, monitoring, and governance controls protect the end-to-end flow.
 
 ### Core Capabilities
 
@@ -164,6 +165,24 @@ Deploy using `scripts/deploy.ps1`:
 
 - **Microsoft Foundry**: Refer to [docs/foundry-obo.md](docs/foundry-obo.md) for step-by-step setup of Foundry IQ OneLake Knowledge, Fabric Data Agent tools, APIM OAuth connections, and agent orchestration.
 - **Microsoft Copilot Studio**: Refer to [docs/copilot-studio-private-obo.md](docs/copilot-studio-private-obo.md) for custom connector creation, maker connection authentication, solution import, invoker consent flow, and troubleshooting.
+
+---
+
+## Fabric UI Reference
+
+These screenshots show the Microsoft Fabric assets used by the reference deployment after provisioning.
+
+### Lakehouse
+
+![Fabric Lakehouse lh_part_shortages_v2 showing its governed Tables and Files](docs/images/01-fabric-lakehouse.png)
+
+The `lh_part_shortages_v2` Lakehouse contains the governed tables and files used by the agents. Its `Files` area supplies approved content to Foundry IQ OneLake Knowledge, while its tables remain available through Fabric SQL endpoints.
+
+### Data Agent
+
+![Published Fabric Data Agent agent_part_shortages with its Lakehouse schemas](docs/images/02-fabric-data-agent.png)
+
+The published `agent_part_shortages` Data Agent provides the conversational semantic layer over selected Lakehouse schemas and tables.
 
 ---
 
