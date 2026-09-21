@@ -1,0 +1,75 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Fabric Data Agent OAuth API",
+    "version": "1.0.0",
+    "description": "Queries the Fabric Data Agent through the private OBO broker.",
+    "contact": {
+      "name": "Fabric Parts Shortages Operations"
+    }
+  },
+  "x-security-controls": {
+    "rateLimiting": {
+      "accountRecoveryThresholds": {
+        "maxAttempts": 5,
+        "windowSeconds": 900
+      },
+      "payloadSizeLimitKb": 64,
+      "ipBasedThrottling": true,
+      "spikeArrest": true,
+      "subscriptionOrUserRateLimits": true
+    },
+    "inputValidation": "APIM validates the delegated JWT and the broker validates the question body.",
+    "errorHandling": "APIM and the broker return sanitized errors without token or body logging."
+  },
+  "paths": {
+    "/query": {
+      "post": {
+        "operationId": "query",
+        "summary": "Query the Fabric Data Agent",
+        "description": "Asks one natural-language question as the delegated Fabric user.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "question"
+                ],
+                "properties": {
+                  "question": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000,
+                    "description": "The natural-language question for the Fabric Data Agent."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fabric Data Agent answer."
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

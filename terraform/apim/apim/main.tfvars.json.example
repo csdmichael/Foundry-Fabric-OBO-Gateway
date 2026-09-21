@@ -1,0 +1,27 @@
+{
+  "resource_api_client_id": "REPLACE-WITH-RESOURCE-API-CLIENT-ID",
+  "api_client_ids": {
+    "lakehouse": [
+      "REPLACE-WITH-LAKEHOUSE-CONNECTOR-CLIENT-ID",
+      "REPLACE-WITH-LAKEHOUSE-FOUNDRY-OAUTH-CLIENT-ID"
+    ],
+    "data_agent": [
+      "REPLACE-WITH-DATA-AGENT-CONNECTOR-CLIENT-ID",
+      "REPLACE-WITH-DATA-AGENT-FOUNDRY-OAUTH-CLIENT-ID"
+    ],
+    "tokenomics": [
+      "REPLACE-WITH-DASHBOARD-CLIENT-ID"
+    ]
+  },
+  "allowed_fabric_guest_object_ids": [
+    "REPLACE-WITH-FABRIC-GUEST-OBJECT-ID"
+  ],
+  "broker_audience": "REPLACE-WITH-BROKER-API-CLIENT-ID",
+  "foundry_project_mi_client_id": "REPLACE-WITH-FOUNDRY-PROJECT-MANAGED-IDENTITY-CLIENT-ID",
+  "broker_private_url": "https://fabric-parts-obo-broker-my.azurewebsites.net",
+  "broker_private_endpoint_ip": "REPLACE-WITH-IP",
+  "application_insights_name": null,
+  "application_insights_resource_group_name": null,
+  "create_private_dns_zone": true,
+  "private_dns_zone_resource_group_name": null
+}

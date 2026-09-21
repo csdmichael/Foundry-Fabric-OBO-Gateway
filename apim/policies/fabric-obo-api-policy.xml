@@ -1,0 +1,113 @@
+<policies>
+  <inbound>
+    <base />
+    <cors allow-credentials="false" terminate-unmatched-request="true">
+      <allowed-origins>
+        <origin>{{fabric-obo-ui-origin}}</origin>
+      </allowed-origins>
+      <allowed-methods preflight-result-max-age="300">
+        <method>GET</method>
+        <method>POST</method>
+        <method>OPTIONS</method>
+      </allowed-methods>
+      <allowed-headers>
+        <header>authorization</header>
+        <header>content-type</header>
+      </allowed-headers>
+      <expose-headers>
+        <header>x-correlation-id</header>
+      </expose-headers>
+    </cors>
+    <validate-jwt header-name="Authorization" require-scheme="Bearer" require-expiration-time="true" require-signed-tokens="true" failed-validation-httpcode="401" failed-validation-error-message="A valid delegated Fabric token is required." output-token-variable-name="fabric-user-jwt">
+      <openid-config url="https://login.microsoftonline.com/{{fabric-obo-resource-tenant-id}}/v2.0/.well-known/openid-configuration" />
+      <audiences>
+        <audience>{{fabric-obo-resource-api-client-id}}</audience>
+      </audiences>
+      <issuers>
+        <issuer>https://login.microsoftonline.com/{{fabric-obo-resource-tenant-id}}/v2.0</issuer>
+      </issuers>
+      <required-claims>
+        <claim name="tid" match="all">
+          <value>{{fabric-obo-resource-tenant-id}}</value>
+        </claim>
+        <claim name="scp" match="any" separator=" ">
+          <value>{{fabric-obo-delegated-scope}}</value>
+        </claim>
+      </required-claims>
+    </validate-jwt>
+    <set-variable name="fabric-user-object-id" value='@(((Jwt)context.Variables["fabric-user-jwt"]).Claims.GetValueOrDefault("oid", "").ToLowerInvariant())' />
+    <choose>
+      <when condition='@{
+        var jwt = (Jwt)context.Variables["fabric-user-jwt"];
+        var tokenType = jwt.Claims.GetValueOrDefault("idtyp", "");
+        var scope = jwt.Claims.GetValueOrDefault("scp", "");
+        var connectorId = jwt.Claims.GetValueOrDefault("azp", "").ToLowerInvariant();
+        var objectId = (string)context.Variables["fabric-user-object-id"];
+        var allowedClientIds = "," + "__ALLOWED_CLIENT_IDS__".Replace(" ", "").ToLowerInvariant() + ",";
+        var allowedObjectIds = "," + "{{fabric-obo-allowed-user-oids}}".Replace(" ", "").ToLowerInvariant() + ",";
+        return string.Equals(tokenType, "app", StringComparison.OrdinalIgnoreCase)
+          || string.IsNullOrEmpty(scope)
+          || string.IsNullOrEmpty(connectorId)
+          || string.IsNullOrEmpty(objectId)
+          || !allowedClientIds.Contains("," + connectorId + ",")
+          || !allowedObjectIds.Contains("," + objectId + ",");
+      }'>
+        <return-response>
+          <set-status code="403" reason="Forbidden" />
+          <set-header name="Cache-Control" exists-action="override">
+            <value>no-store</value>
+          </set-header>
+          <set-header name="Pragma" exists-action="override">
+            <value>no-cache</value>
+          </set-header>
+          <set-body>{"error":"The delegated Fabric identity is not authorized."}</set-body>
+        </return-response>
+      </when>
+    </choose>
+    <rate-limit-by-key calls="{{fabric-obo-rate-limit-calls}}" renewal-period="{{fabric-obo-rate-limit-renewal-seconds}}" counter-key='@((string)context.Variables["fabric-user-object-id"])' />
+    <set-variable name="fabric-user-assertion" value='@(context.Request.Headers.GetValueOrDefault("Authorization", "").Substring(7))' />
+    <authentication-managed-identity resource="api://{{fabric-obo-broker-audience}}" output-token-variable-name="fabric-broker-token" ignore-error="false" />
+    <set-header name="Authorization" exists-action="override">
+      <value>@("Bearer " + (string)context.Variables["fabric-broker-token"])</value>
+    </set-header>
+    <set-header name="x-user-assertion" exists-action="override">
+      <value>@((string)context.Variables["fabric-user-assertion"])</value>
+    </set-header>
+    <set-header name="x-correlation-id" exists-action="override">
+      <value>@(context.RequestId.ToString())</value>
+    </set-header>
+    <set-header name="Ocp-Apim-Subscription-Key" exists-action="delete" />
+    <set-query-parameter name="subscription-key" exists-action="delete" />
+    <set-backend-service base-url="{{fabric-obo-broker-private-url}}" />
+  </inbound>
+  <backend>
+    <forward-request timeout="{{fabric-obo-request-timeout-seconds}}" buffer-request-body="false" buffer-response="false" />
+  </backend>
+  <outbound>
+    <base />
+    <set-header name="Cache-Control" exists-action="override">
+      <value>no-store</value>
+    </set-header>
+    <set-header name="Pragma" exists-action="override">
+      <value>no-cache</value>
+    </set-header>
+    <set-header name="Expires" exists-action="override">
+      <value>0</value>
+    </set-header>
+    <set-header name="x-correlation-id" exists-action="override">
+      <value>@(context.RequestId.ToString())</value>
+    </set-header>
+  </outbound>
+  <on-error>
+    <base />
+    <set-header name="Cache-Control" exists-action="override">
+      <value>no-store</value>
+    </set-header>
+    <set-header name="Pragma" exists-action="override">
+      <value>no-cache</value>
+    </set-header>
+    <set-header name="x-correlation-id" exists-action="override">
+      <value>@(context.RequestId.ToString())</value>
+    </set-header>
+  </on-error>
+</policies>

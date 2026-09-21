@@ -1,0 +1,403 @@
+targetScope = 'resourceGroup'
+
+param apimServiceName string
+param resourceTenantId string
+param callerTenantId string
+param resourceApiClientId string
+param delegatedScope string
+param lakehouseClientIds array
+param dataAgentClientIds array
+param allowedUserObjectIds array
+param brokerAudience string
+param brokerRole string
+param brokerPrivateUrl string
+param rateLimitCalls int
+param rateLimitRenewalSeconds int
+param requestTimeoutSeconds int
+param lakehouseApiId string
+param lakehouseApiPath string
+param lakehouseMcpDisplayName string
+param lakehouseMcpPath string
+param dataAgentApiId string
+param dataAgentApiPath string
+param dataAgentMcpDisplayName string
+param dataAgentMcpPath string
+param foundryTenantId string
+param foundryProjectMiClientId string
+param foundryAccountName string
+param foundryModelTokenLimitPerMinute int
+param foundryInferenceApis array
+param fabricProductId string
+param foundryProductId string
+param uiAllowedOrigin string
+param applicationInsightsName string
+param applicationInsightsResourceGroupName string
+
+var diagnosticsEnabled = !empty(applicationInsightsName)
+var loggerName = 'fabric-obo-insights'
+var lakehouseMcpId = '${lakehouseApiId}-mcp'
+var dataAgentMcpId = '${dataAgentApiId}-mcp'
+var commonApiPolicy = loadTextContent('../../apim/policies/fabric-obo-api-policy.xml')
+var foundryInferencePolicy = loadTextContent('../../apim/policies/foundry-inference-policy.xml')
+var namedValueSettings = [
+  { name: 'fabric-obo-resource-tenant-id', value: resourceTenantId }
+  { name: 'fabric-obo-caller-tenant-id', value: callerTenantId }
+  { name: 'fabric-obo-resource-api-client-id', value: resourceApiClientId }
+  { name: 'fabric-obo-delegated-scope', value: delegatedScope }
+  { name: 'fabric-obo-allowed-user-ids', value: join(allowedUserObjectIds, ',') }
+  { name: 'fabric-obo-broker-audience', value: brokerAudience }
+  { name: 'fabric-obo-broker-role', value: brokerRole }
+  { name: 'fabric-obo-broker-private-url', value: brokerPrivateUrl }
+  { name: 'fabric-obo-rate-limit-calls', value: string(rateLimitCalls) }
+  { name: 'fabric-obo-rate-limit-renewal-seconds', value: string(rateLimitRenewalSeconds) }
+  { name: 'fabric-obo-request-timeout-seconds', value: string(requestTimeoutSeconds) }
+  { name: 'fabric-obo-ui-origin', value: uiAllowedOrigin }
+  { name: 'foundry-tenant-id', value: foundryTenantId }
+  { name: 'foundry-project-mi-client-id', value: foundryProjectMiClientId }
+  { name: 'foundry-account-name', value: foundryAccountName }
+  { name: 'foundry-model-token-limit-per-minute', value: string(foundryModelTokenLimitPerMinute) }
+]
+
+resource apim 'Microsoft.ApiManagement/service@2024-06-01-preview' existing = {
+  name: apimServiceName
+}
+
+resource namedValues 'Microsoft.ApiManagement/service/namedValues@2024-06-01-preview' = [for setting in namedValueSettings: {
+  parent: apim
+  name: setting.name
+  properties: {
+    displayName: setting.name
+    value: setting.value
+    secret: false
+  }
+}]
+
+resource lakehouseApi 'Microsoft.ApiManagement/service/apis@2024-06-01-preview' = {
+  parent: apim
+  name: lakehouseApiId
+  properties: {
+    displayName: 'Fabric Lakehouse OBO'
+    description: 'User-delegated read access to Microsoft Fabric Lakehouse schemas and tables.'
+    path: lakehouseApiPath
+    protocols: [
+      'https'
+    ]
+    subscriptionRequired: false
+    format: 'openapi+json'
+    value: loadTextContent('../../apim/openapi/lakehouse.json')
+  }
+}
+
+resource dataAgentApi 'Microsoft.ApiManagement/service/apis@2024-06-01-preview' = {
+  parent: apim
+  name: dataAgentApiId
+  properties: {
+    displayName: 'Fabric Data Agent OBO'
+    description: 'User-delegated natural-language question execution against Microsoft Fabric Data Agents.'
+    path: dataAgentApiPath
+    protocols: [
+      'https'
+    ]
+    subscriptionRequired: false
+    format: 'openapi+json'
+    value: loadTextContent('../../apim/openapi/data-agent.json')
+  }
+}
+
+resource foundryInferenceApi 'Microsoft.ApiManagement/service/apis@2024-06-01-preview' = [for inferenceApi in foundryInferenceApis: {
+  parent: apim
+  name: inferenceApi.id
+  properties: {
+    displayName: 'Foundry inference - ${inferenceApi.agentId}'
+    description: 'Managed-identity AI Gateway route for ${inferenceApi.agentId}.'
+    path: inferenceApi.path
+    protocols: [
+      'https'
+    ]
+    serviceUrl: 'https://${foundryAccountName}.openai.azure.com/openai'
+    subscriptionRequired: false
+  }
+}]
+
+resource foundryChatCompletionsOperation 'Microsoft.ApiManagement/service/apis/operations@2024-06-01-preview' = [for (inferenceApi, index) in foundryInferenceApis: {
+  parent: foundryInferenceApi[index]
+  name: 'chat-completions'
+  properties: {
+    displayName: 'Chat completions'
+    method: 'POST'
+    urlTemplate: '/deployments/{deployment-id}/chat/completions'
+    templateParameters: [
+      {
+        name: 'deployment-id'
+        type: 'string'
+        required: true
+        description: 'Azure OpenAI model deployment name configured in Microsoft Foundry.'
+      }
+    ]
+  }
+}]
+
+resource foundryInferenceApiPolicy 'Microsoft.ApiManagement/service/apis/policies@2024-06-01-preview' = [for (inferenceApi, index) in foundryInferenceApis: {
+  parent: foundryInferenceApi[index]
+  name: 'policy'
+  properties: {
+    format: 'rawxml'
+    value: replace(foundryInferencePolicy, '__EXPECTED_AGENT_ID__', inferenceApi.agentId)
+  }
+  dependsOn: [
+    namedValues
+  ]
+}]
+
+resource lakehouseApiPolicy 'Microsoft.ApiManagement/service/apis/policies@2024-06-01-preview' = {
+  parent: lakehouseApi
+  name: 'policy'
+  properties: {
+    format: 'rawxml'
+    value: replace(commonApiPolicy, '__ALLOWED_CLIENT_IDS__', join(lakehouseClientIds, ','))
+  }
+  dependsOn: [
+    namedValues
+  ]
+}
+
+resource dataAgentApiPolicy 'Microsoft.ApiManagement/service/apis/policies@2024-06-01-preview' = {
+  parent: dataAgentApi
+  name: 'policy'
+  properties: {
+    format: 'rawxml'
+    value: replace(commonApiPolicy, '__ALLOWED_CLIENT_IDS__', join(dataAgentClientIds, ','))
+  }
+  dependsOn: [
+    namedValues
+  ]
+}
+
+resource lakehouseTablesOperation 'Microsoft.ApiManagement/service/apis/operations@2024-06-01-preview' existing = {
+  parent: lakehouseApi
+  name: 'list-tables'
+}
+
+resource lakehouseQueryOperation 'Microsoft.ApiManagement/service/apis/operations@2024-06-01-preview' existing = {
+  parent: lakehouseApi
+  name: 'query-lakehouse'
+}
+
+resource dataAgentQueryOperation 'Microsoft.ApiManagement/service/apis/operations@2024-06-01-preview' existing = {
+  parent: dataAgentApi
+  name: 'query-agent'
+}
+
+resource lakehouseTablesPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2024-06-01-preview' = {
+  parent: lakehouseTablesOperation
+  name: 'policy'
+  properties: {
+    format: 'rawxml'
+    value: loadTextContent('../../apim/policies/lakehouse-tables-operation-policy.xml')
+  }
+}
+
+resource lakehouseQueryPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2024-06-01-preview' = {
+  parent: lakehouseQueryOperation
+  name: 'policy'
+  properties: {
+    format: 'rawxml'
+    value: loadTextContent('../../apim/policies/lakehouse-query-operation-policy.xml')
+  }
+}
+
+resource dataAgentQueryPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2024-06-01-preview' = {
+  parent: dataAgentQueryOperation
+  name: 'policy'
+  properties: {
+    format: 'rawxml'
+    value: loadTextContent('../../apim/policies/data-agent-query-operation-policy.xml')
+  }
+}
+
+resource lakehouseMcp 'Microsoft.ApiManagement/service/apis@2024-06-01-preview' = {
+  parent: apim
+  name: lakehouseMcpId
+  properties: any({
+    type: 'mcp'
+    displayName: lakehouseMcpDisplayName
+    description: 'MCP tools for the Fabric Lakehouse OAuth API.'
+    path: lakehouseMcpPath
+    protocols: [
+      'https'
+    ]
+    subscriptionRequired: false
+    mcpTools: [
+      {
+        name: 'tables'
+        description: 'List Fabric Lakehouse tables using caller credentials.'
+        operationId: lakehouseTablesOperation.id
+      }
+      {
+        name: 'query'
+        description: 'Execute a read-only SQL query against the Fabric Lakehouse using caller credentials.'
+        operationId: lakehouseQueryOperation.id
+      }
+    ]
+  })
+}
+
+resource dataAgentMcp 'Microsoft.ApiManagement/service/apis@2024-06-01-preview' = {
+  parent: apim
+  name: dataAgentMcpId
+  properties: any({
+    type: 'mcp'
+    displayName: dataAgentMcpDisplayName
+    description: 'MCP tool for querying the Fabric Data Agent using caller credentials.'
+    path: dataAgentMcpPath
+    protocols: [
+      'https'
+    ]
+    subscriptionRequired: false
+    mcpTools: [
+      {
+        name: 'query'
+        description: 'Ask the Fabric Data Agent a question using caller credentials.'
+        operationId: dataAgentQueryOperation.id
+      }
+    ]
+  })
+}
+
+resource fabricProduct 'Microsoft.ApiManagement/service/products@2024-06-01-preview' = {
+  parent: apim
+  name: fabricProductId
+  properties: {
+    displayName: 'fabric'
+    description: 'Fabric Lakehouse and Data Agent OBO endpoints governed by Microsoft Entra ID and the broker.'
+    subscriptionRequired: false
+    state: 'published'
+  }
+}
+
+resource foundryProduct 'Microsoft.ApiManagement/service/products@2024-06-01-preview' = {
+  parent: apim
+  name: foundryProductId
+  properties: {
+    displayName: 'foundry'
+    description: 'Managed-identity Microsoft Foundry model inference APIs governed by APIM AI Gateway policies.'
+    subscriptionRequired: false
+    state: 'published'
+  }
+}
+
+var fabricProductApis = [
+  { name: 'link-${lakehouseApiId}', apiId: lakehouseApi.id }
+  { name: 'link-${dataAgentApiId}', apiId: dataAgentApi.id }
+  { name: 'link-${lakehouseMcpId}', apiId: lakehouseMcp.id }
+  { name: 'link-${dataAgentMcpId}', apiId: dataAgentMcp.id }
+]
+
+resource fabricProductApiLinks 'Microsoft.ApiManagement/service/products/apiLinks@2024-06-01-preview' = [for item in fabricProductApis: {
+  parent: fabricProduct
+  name: item.name
+  properties: {
+    apiId: item.apiId
+  }
+}]
+
+resource foundryProductApiLinks 'Microsoft.ApiManagement/service/products/apiLinks@2024-06-01-preview' = [for (inferenceApi, index) in foundryInferenceApis: {
+  parent: foundryProduct
+  name: 'link-${inferenceApi.id}'
+  properties: {
+    apiId: foundryInferenceApi[index].id
+  }
+}]
+
+resource insights 'Microsoft.Insights/components@2020-02-02' existing = if (diagnosticsEnabled) {
+  scope: resourceGroup(applicationInsightsResourceGroupName)
+  name: applicationInsightsName
+}
+
+resource logger 'Microsoft.ApiManagement/service/loggers@2024-06-01-preview' = if (diagnosticsEnabled) {
+  parent: apim
+  name: loggerName
+  properties: {
+    loggerType: 'applicationInsights'
+    credentials: {
+      instrumentationKey: insights!.properties.InstrumentationKey
+    }
+    resourceId: insights!.id
+    isBuffered: true
+  }
+}
+
+var diagnosticProperties = {
+  loggerId: resourceId('Microsoft.ApiManagement/service/loggers', apimServiceName, loggerName)
+  alwaysLog: 'allErrors'
+  sampling: {
+    samplingType: 'fixed'
+    percentage: 100
+  }
+  verbosity: 'information'
+  logClientIp: false
+  httpCorrelationProtocol: 'W3C'
+  frontend: {
+    request: { headers: [], body: { bytes: 0 } }
+    response: { headers: [], body: { bytes: 0 } }
+  }
+  backend: {
+    request: { headers: [], body: { bytes: 0 } }
+    response: { headers: [], body: { bytes: 0 } }
+  }
+}
+
+resource lakehouseDiagnostic 'Microsoft.ApiManagement/service/apis/diagnostics@2024-06-01-preview' = if (diagnosticsEnabled) {
+  parent: lakehouseApi
+  name: 'applicationinsights'
+  properties: diagnosticProperties
+  dependsOn: [
+    logger
+  ]
+}
+
+resource dataAgentDiagnostic 'Microsoft.ApiManagement/service/apis/diagnostics@2024-06-01-preview' = if (diagnosticsEnabled) {
+  parent: dataAgentApi
+  name: 'applicationinsights'
+  properties: diagnosticProperties
+  dependsOn: [
+    logger
+  ]
+}
+
+resource lakehouseMcpDiagnostic 'Microsoft.ApiManagement/service/apis/diagnostics@2024-06-01-preview' = if (diagnosticsEnabled) {
+  parent: lakehouseMcp
+  name: 'applicationinsights'
+  properties: diagnosticProperties
+  dependsOn: [
+    logger
+  ]
+}
+
+resource dataAgentMcpDiagnostic 'Microsoft.ApiManagement/service/apis/diagnostics@2024-06-01-preview' = if (diagnosticsEnabled) {
+  parent: dataAgentMcp
+  name: 'applicationinsights'
+  properties: diagnosticProperties
+  dependsOn: [
+    logger
+  ]
+}
+
+resource foundryInferenceDiagnostic 'Microsoft.ApiManagement/service/apis/diagnostics@2024-06-01-preview' = [for (inferenceApi, index) in foundryInferenceApis: if (diagnosticsEnabled) {
+  parent: foundryInferenceApi[index]
+  name: 'applicationinsights'
+  properties: diagnosticProperties
+  dependsOn: [
+    logger
+    foundryInferenceApiPolicy[index]
+  ]
+}]
+
+output apimPrincipalId string = apim.identity.principalId
+output lakehouseApiId string = lakehouseApi.id
+output dataAgentApiId string = dataAgentApi.id
+output lakehouseMcpId string = lakehouseMcp.id
+output dataAgentMcpId string = dataAgentMcp.id
+output foundryInferenceApiIds array = [for (inferenceApi, index) in foundryInferenceApis: foundryInferenceApi[index].id]
+output fabricProductId string = fabricProduct.id
+output foundryProductId string = foundryProduct.id

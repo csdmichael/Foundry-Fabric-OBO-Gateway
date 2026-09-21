@@ -1,0 +1,183 @@
+Create a cosmos db that has the following token consumption data:
+    - AWS Bedrock Models Token Consumption by model family, model name, version, user, tea, cost center, project
+    - GCP Vertex AI Models Token Consumption by model family, model name, version, user, tea, cost center, project
+    - OpenAI  Token Consumption by model family, model name, version, user, tea, cost center, project
+    - Claude  Token Consumption by model family, model name, version, user, tea, cost center, project
+
+Generate few thousands of records and users and modes to mimic real model consumption data
+
+In Fabric, create a new workspace for Tokenomics that has the following data in Lakehouse / Onelake:
+    - AWS Bedrock Models Token Consumption
+    - GCP Vertex AI Models Token Consumption
+    - OpenAI  Token Consumption
+    - Claude  Token Consumption
+    - Microsoft Foundry Token Consumption from Log Analytics workspace
+
+Implement Dataflow Gen 2 to copy token consumption from Cosmos DB and Log Analytics workspace to fabric lakehouse
+
+Also in tokenomics lakehouse, create table(s) for model prices based on time-series as model prices change and leverage pricing apis to store this data. The pricing data need to be merge with token consumption data so the reports and dashboards in powerbi by user, team, project, cost center, model family, model provider can show token consumption as well as dollar amount
+
+Create a folder in same workspace for ML Notebooks as follows:
+    - Use PySpark to handle large scale
+    - Implement one ML notebook for training / feature engineering / etc and another one for inference / predictions
+    - Implement the following use cases on token consumption data in lakehouse from AWS, GCP, Foundry, OpenAI, Claude:
+        - Anomaly detection
+        - Cost Forecasting
+        - Cost Attribution & Chargeback
+            Allocate costs automatically.
+            Predict:
+                Department
+                Project
+                Cost center
+            Dimensions:
+                User
+                Team
+                App
+                Environment (Dev/Test/Prod)
+
+            Outputs:
+                Monthly chargeback report
+                Cross-team allocation
+        - User Segmentation
+            Cluster users based on AI usage behaviors.
+            Groups:
+
+                - Casual users
+                - Heavy researchers
+                - Agent builders
+                - Developers
+                - Executive users
+            Algorithms:
+                - K-Means
+                - DBSCAN
+            Insights:
+                - Licensing optimization
+                - Enablement recommendations
+                - Training opportunities
+        
+        - Token Efficiency Scoring
+            Create an AI efficiency score.
+            Formula examples:
+            Cost per completed task
+            Tokens per business outcome
+            Cache hit ratio
+            Agent tool efficiency
+        - Budget Overrun Prediction
+            Predict projects likely to exceed budget.
+            Features:
+                Current burn rate
+                Team growth
+                Agent adoption trends
+                New workloads
+            Output:
+                Risk score (0-100)
+            Example: Project Falcon has an 82% probability of exceeding budget before quarter-end.
+        - Model Optimization Recommendation Engine
+
+            Recommend cheaper models.
+
+            Example:
+
+            GPT-5 used for summarization
+            ML identifies GPT-4.1-mini could achieve same quality
+
+            Potential savings:
+
+            40% to 80%
+
+            Outputs:
+
+            Current model
+            Recommended model
+            Estimated annual savings
+        8. Agent ROI Analytics
+
+            Calculate return on AI agent investments.
+
+            Metrics:
+
+            Token cost
+            Tasks completed
+            Hours saved
+            Ticket reduction
+            Code generated
+
+            Output: ROI dashboard by:
+
+            Agent
+            Team
+            Business unit
+        9. Intelligent Quota Management
+
+            Predict who needs additional quota before issues occur.
+
+            Use:
+
+            Historical trends
+            Growth patterns
+            Release schedules
+
+            Output: Recommended TPM/RPM adjustments for projects and teams.
+
+        10. Prompt Quality Analytics
+
+            Identify inefficient prompts.
+
+            Signals:
+
+            Long prompts
+            High retries
+            Excessive context windows
+            Repeated failures
+
+            Output: Prompt health score
+
+            Example recommendation: "Reduce context from 40k to 12k tokens to save 65% cost."
+
+        11. Capacity Planning
+
+            Forecast AI infrastructure needs.
+
+            Predict:
+
+            APIM throughput
+            Foundry regional capacity
+            AI Search consumption
+            Model quotas
+
+            Useful for:
+
+            Quarterly planning
+            MACC tracking
+            Quota increase requests
+        12. Executive AI Adoption Scorecard
+
+            Create executive dashboards in Fabric and Power BI.
+
+            KPIs:
+
+            Tokens per user
+            Cost per project
+            Savings generated
+            Active AI users
+            Agent adoption
+            Top consuming teams
+            Efficiency trends
+
+            Visuals:
+
+            Heat maps
+            Team rankings
+            Cost trend forecasts
+            ROI metrics
+
+For all ML Algorithms, they need to output their results in OneLake ML output schema tables
+Also, other tables for token consumption needs to be schema prefixed by source (gcp, aws, msft, oai, cld) which are short names for model platforms.
+
+Implement powerbi dashboards with tables, hierarchies, graphs / charts to demo ML outputs and handle whole finops
+
+Include Medallion Architecture png file under docs in readme and explain it in the context of this business problem. The raw data for token consumption lives in Azure Blob Storage then it gets cleanized / ETL to Cosmos DB then Fabric
+
+
+-------------------------
+build 2 foundry agents in this proj: https://ai.azure.com/nextgen/r/z4JFcKi6SXqhhApS8YMKqQ,m365-myaacoub,,foundry-myaacoub-private,sales-poc/build/agents . They need to use mcp servers: https://caldova-apim-westus.azure-api.net/fabric-data-agent-mcp/mcp, https://caldova-apim-westus.azure-api.net/fabric-lakehouse-mcp/mcp respectively. It is an obo flow to authenticate. If needed, add subscribption key in APIM for fabric product and reflect it in foundry agents.

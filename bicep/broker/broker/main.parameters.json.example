@@ -1,0 +1,114 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "<deployment.json:azure.location>"
+    },
+    "functionAppName": {
+      "value": "<deployment.json:broker.appName>"
+    },
+    "existingPlanName": {
+      "value": "<deployment.json:broker.existingPlanName>"
+    },
+    "brokerVnetResourceId": {
+      "value": "<deployment.json:network.brokerVnetResourceId>"
+    },
+    "privateEndpointSubnetResourceId": {
+      "value": "<deployment.json:network.brokerPrivateEndpointSubnetResourceId>"
+    },
+    "integrationSubnetResourceId": {
+      "value": "<deployment.json:network.brokerIntegrationSubnetResourceId>"
+    },
+    "azureTenantId": {
+      "value": "<deployment.json:azure.tenantId>"
+    },
+    "resourceTenantId": {
+      "value": "<deployment.json:identity.resourceTenantId>"
+    },
+    "callerTenantId": {
+      "value": "<deployment.json:identity.callerTenantId>"
+    },
+    "entraApiClientId": {
+      "value": ""
+    },
+    "brokerAudience": {
+      "value": ""
+    },
+    "apimPrincipalId": {
+      "value": ""
+    },
+    "allowedConnectorClientIds": {
+      "value": []
+    },
+    "allowedUserObjectIds": {
+      "value": []
+    },
+    "currentDeployerPrincipalId": {
+      "value": "<CURRENT_DEPLOYER_OBJECT_ID>"
+    },
+    "deploymentContainerName": {
+      "value": "deployments"
+    },
+    "packageBlobName": {
+      "value": "fabric-obo-broker.zip"
+    },
+    "oboClientSecretName": {
+      "value": "obo-client-secret"
+    },
+    "deployFunction": {
+      "value": false
+    },
+    "brokerApplicationRole": {
+      "value": "<deployment.json:identity.brokerApplicationRole>"
+    },
+    "delegatedScope": {
+      "value": "<deployment.json:identity.delegatedScope>"
+    },
+    "fabricApiScope": {
+      "value": "<deployment.json:identity.fabricApiScope>"
+    },
+    "powerBiApiScope": {
+      "value": "<deployment.json:identity.powerBiApiScope>"
+    },
+    "fabricWorkspaceId": {
+      "value": "<deployment.json:fabric.workspaceId>"
+    },
+    "fabricLakehouseName": {
+      "value": "<deployment.json:fabric.lakehouseName>"
+    },
+    "fabricSqlEndpointHost": {
+      "value": "<deployment.json:fabric.sqlEndpointHost>"
+    },
+    "fabricDataAgentId": {
+      "value": "<deployment.json:fabric.dataAgentId>"
+    },
+    "runtime": {
+      "value": "<deployment.json:broker.runtime>"
+    },
+    "alwaysOn": {
+      "value": true
+    },
+    "jwkFetchTimeoutMs": {
+      "value": 5000
+    },
+    "tokenExchangeTimeoutMs": {
+      "value": 15000
+    },
+    "sqlConnectTimeoutMs": {
+      "value": 30000
+    },
+    "sqlRequestTimeoutMs": {
+      "value": 120000
+    },
+    "maxRows": {
+      "value": 1000
+    },
+    "maxStatementLength": {
+      "value": 10000
+    },
+    "tags": {
+      "value": {}
+    }
+  }
+}

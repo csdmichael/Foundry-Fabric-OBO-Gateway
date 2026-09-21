@@ -1,0 +1,31 @@
+{
+  "name": "fabric-obo-broker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/src/functions/*.js",
+  "scripts": {
+    "build": "tsc",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "start": "func start",
+    "test": "npm run build && node --test dist/test/*.test.js"
+  },
+  "dependencies": {
+    "@azure/cosmos": "^4.10.1",
+    "@azure/functions": "^4.7.2",
+    "@azure/identity": "^4.13.3",
+    "@azure/monitor-query-logs": "^1.0.0",
+    "@azure/msal-node": "^6.0.1",
+    "jose": "^6.1.0",
+    "mssql": "^12.1.0",
+    "node-sql-parser": "^5.3.13"
+  },
+  "devDependencies": {
+    "@types/mssql": "^9.1.8",
+    "@types/node": "^22.18.3",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=22 <23"
+  }
+}

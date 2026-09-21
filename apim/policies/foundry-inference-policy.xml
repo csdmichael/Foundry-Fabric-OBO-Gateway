@@ -1,0 +1,42 @@
+<policies>
+  <inbound>
+    <base />
+    <validate-azure-ad-token tenant-id="{{foundry-tenant-id}}" header-name="Authorization" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized">
+      <client-application-ids>
+        <application-id>{{foundry-project-mi-client-id}}</application-id>
+      </client-application-ids>
+      <audiences>
+        <audience>https://cognitiveservices.azure.com</audience>
+      </audiences>
+    </validate-azure-ad-token>
+    <choose>
+      <when condition="@(!string.Equals(context.Request.Headers.GetValueOrDefault(&quot;x-foundry-agent-id&quot;, &quot;&quot;), &quot;__AGENT_ID__&quot;, StringComparison.Ordinal))">
+        <return-response>
+          <set-status code="403" reason="Agent attribution mismatch" />
+          <set-body>{"error":"agent_attribution_mismatch"}</set-body>
+        </return-response>
+      </when>
+    </choose>
+    <azure-openai-token-limit tokens-per-minute="{{foundry-model-token-limit}}" counter-key="__AGENT_ID__" estimate-prompt-tokens="true" tokens-consumed-header-name="x-tokens-consumed" remaining-tokens-header-name="x-tokens-remaining" />
+    <set-header name="x-foundry-agent-id" exists-action="delete" />
+    <set-backend-service base-url="{{foundry-model-backend-url}}" />
+    <authentication-managed-identity resource="https://cognitiveservices.azure.com" />
+    <azure-openai-emit-token-metric namespace="fabric-costops">
+      <dimension name="Agent" value="__AGENT_ID__" />
+      <dimension name="API" value="@(context.Api.Id)" />
+      <dimension name="Operation" value="@(context.Operation.Id)" />
+    </azure-openai-emit-token-metric>
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+    <set-header name="x-foundry-agent-id" exists-action="override">
+      <value>__AGENT_ID__</value>
+    </set-header>
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

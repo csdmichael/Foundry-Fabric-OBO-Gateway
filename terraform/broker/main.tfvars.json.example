@@ -1,0 +1,15 @@
+{
+  "config_path": "../../config/deployment.json",
+  "deploy_function": false,
+  "entra_api_client_id": "",
+  "broker_audience": "",
+  "apim_principal_id": "",
+  "allowed_connector_client_ids": [],
+  "allowed_user_object_ids": [],
+  "current_deployer_principal_id": "<CURRENT_DEPLOYER_OBJECT_ID>",
+  "deployment_container_name": "deployments",
+  "package_blob_name": "fabric-obo-broker.zip",
+  "obo_client_secret_name": "obo-client-secret",
+  "log_retention_days": 30,
+  "blob_delete_retention_days": 7
+}

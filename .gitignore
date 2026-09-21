@@ -1,0 +1,51 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+!*.tfvars.example
+tfplan
+*.tfplan
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+.terraform.lock.hcl
+
+# Azure and secrets
+*.pfx
+*.pem
+.env
+.env.*
+azureauth.json
+*.publishsettings
+
+# Generated deployment and build output
+.generated/
+tmp/
+out/
+*.zip
+node_modules/
+npm-debug.log*
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# OS and editor
+.DS_Store
+Thumbs.db
+*.log
+.vscode/*.local
+
+dist/
+
+
+dist/
+

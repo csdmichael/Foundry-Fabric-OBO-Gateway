@@ -1,0 +1,97 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.47.16.16243",
+      "templateHash": "1184101616965959913"
+    }
+  },
+  "parameters": {
+    "accountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Existing Microsoft Foundry account name."
+      }
+    },
+    "projectName": {
+      "type": "string",
+      "metadata": {
+        "description": "Existing Microsoft Foundry project name."
+      }
+    },
+    "apimGatewayUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Existing private APIM gateway URL."
+      }
+    },
+    "connections": {
+      "type": "array",
+      "minLength": 2,
+      "metadata": {
+        "description": "Per-agent connection settings containing connectionName, apiPath, and agentId."
+      }
+    },
+    "modelName": {
+      "type": "string",
+      "metadata": {
+        "description": "Model deployment name exposed by APIM."
+      }
+    },
+    "modelFormat": {
+      "type": "string",
+      "metadata": {
+        "description": "Model provider format."
+      }
+    },
+    "modelVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "Pinned model version."
+      }
+    }
+  },
+  "resources": [
+    {
+      "copy": {
+        "name": "modelConnection",
+        "count": "[length(parameters('connections'))]"
+      },
+      "type": "Microsoft.CognitiveServices/accounts/projects/connections",
+      "apiVersion": "2025-04-01-preview",
+      "name": "[format('{0}/{1}/{2}', parameters('accountName'), parameters('projectName'), parameters('connections')[copyIndex()].connectionName)]",
+      "properties": {
+        "audience": "https://cognitiveservices.azure.com",
+        "authType": "ProjectManagedIdentity",
+        "category": "ApiManagement",
+        "credentials": {},
+        "isSharedToAll": true,
+        "metadata": {
+          "customHeaders": "[string(createObject('x-foundry-agent-id', parameters('connections')[copyIndex()].agentId))]",
+          "deploymentInPath": "true",
+          "inferenceAPIVersion": "2024-10-21",
+          "models": "[string(createArray(createObject('name', parameters('modelName'), 'properties', createObject('model', createObject('format', parameters('modelFormat'), 'name', parameters('modelName'), 'version', parameters('modelVersion'))))))]"
+        },
+        "target": "[format('{0}/{1}', parameters('apimGatewayUrl'), parameters('connections')[copyIndex()].apiPath)]"
+      }
+    }
+  ],
+  "outputs": {
+    "connectionIds": {
+      "type": "array",
+      "copy": {
+        "count": "[length(parameters('connections'))]",
+        "input": "[resourceId('Microsoft.CognitiveServices/accounts/projects/connections', parameters('accountName'), parameters('projectName'), parameters('connections')[copyIndex()].connectionName)]"
+      }
+    },
+    "connectionNames": {
+      "type": "array",
+      "copy": {
+        "count": "[length(parameters('connections'))]",
+        "input": "[parameters('connections')[copyIndex()].connectionName]"
+      }
+    }
+  }
+}

@@ -1,0 +1,258 @@
+{
+  "schemaVersion": 1,
+  "azure": {
+    "tenantId": "12a4b86b-e64c-43f9-af05-d9130a72dfd2",
+    "subscriptionId": "cf824570-a8ba-497a-a184-0a52f1830aa9",
+    "resourceGroup": "m365-myaacoub",
+    "location": "westus2"
+  },
+  "fabric": {
+    "workspaceId": "53829079-597d-4c27-9897-6a2042473761",
+    "workspaceName": "Fabric IQ Parts Shortages",
+    "capacityId": "37fcefa2-236a-47c0-a528-2c80137dfec0",
+    "capacityName": "caldovafabricmyaacoub",
+    "capacityRegion": "West US 2",
+    "lakehouseId": "a757a457-6402-4c2a-bf5e-1f80d55f68e8",
+    "lakehouseName": "lh_part_shortages_v2",
+    "sqlEndpointId": "0e30ee4b-25af-47ee-b783-90681caad6d8",
+    "sqlEndpointHost": "no4kiesm434uhlyf3ejqu4w72i-pgiieu35letuzgexniqeerzxme.datawarehouse.fabric.microsoft.com",
+    "dataAgentId": "25696ea2-a91e-4b18-9846-5d045c6a082e",
+    "dataAgentName": "agent_part_shortages"
+  },
+  "migration": {
+    "sourceTenantId": "b158173c-91f6-4f99-b5e9-aa9bcb463863",
+    "sourceSubscriptionId": "86b37969-9445-49cf-b03f-d8866235171c",
+    "sourceWorkspaceId": "2b2c447d-86e1-4982-a5b6-09d2e0f3482d",
+    "sourceLakehouseId": "d487748c-006e-4945-a2ac-9ddb26c999f1",
+    "sourceSqlEndpointId": "12c47d8c-d0c6-4cae-8599-760f7c18b048",
+    "sourceDataAgentId": "2ec6cb5e-2f5c-44e7-9c0d-a113cb372741",
+    "sourceSemanticModelId": "96cabc5e-0c2a-453d-9ded-b2ec5046ee63",
+    "sourceReportIds": [
+      "493264da-721d-4b57-99b1-0924c33eab8b",
+      "0b43f697-a1fd-40bd-b6ba-6c29424cbcfa"
+    ],
+    "sourceDashboardIds": [
+      "705b7682-7d29-4462-a031-0aede52e5e84",
+      "ec08f7af-ee2f-4579-b6c8-5ed293c20f6d"
+    ],
+    "targetCapacityResourceId": "/subscriptions/cf824570-a8ba-497a-a184-0a52f1830aa9/resourceGroups/m365-myaacoub/providers/Microsoft.Fabric/capacities/caldovafabricmyaacoub",
+    "targetCapacityId": "37fcefa2-236a-47c0-a528-2c80137dfec0",
+    "targetWorkspaceId": "53829079-597d-4c27-9897-6a2042473761"
+  },
+  "powerBi": {
+    "semanticModelId": "18be2ce1-3566-437d-971d-c4532e2e3575",
+    "semanticModelName": "sm_part_shortages",
+    "executiveReportId": "33c7ffc1-69d9-4a9c-a6a7-fdb9417c29f9",
+    "operationalReportIds": [
+      "b061fa31-6ed0-4415-80f8-9e58fba07d26",
+      "8c02521b-b2c3-4309-83c2-6ce4391c5b1a"
+    ],
+    "dashboardIds": [
+      "871a0eea-fd2b-40d0-bb94-34c031975f03",
+      "e32f630f-3ea1-41d9-8943-3c319051159f"
+    ]
+  },
+  "apim": {
+    "tenantId": "12a4b86b-e64c-43f9-af05-d9130a72dfd2",
+    "subscriptionId": "cf824570-a8ba-497a-a184-0a52f1830aa9",
+    "resourceGroup": "m365-myaacoub",
+    "location": "westus",
+    "createService": false,
+    "serviceName": "caldova-apim-westus",
+    "gatewayUrl": "https://caldova-apim-westus.azure-api.net",
+    "skuName": "StandardV2",
+    "publisherEmail": "admin@caldova37587778.onmicrosoft.com",
+    "publisherName": "Caldova",
+    "publicNetworkAccess": "Disabled",
+    "lakehouseApiId": "fabric-lakehouse-obo",
+    "lakehouseApiPath": "fabric-lakehouse",
+    "lakehouseMcpDisplayName": "Fabric Lakehouse MCP",
+    "lakehouseMcpPath": "fabric-lakehouse-mcp",
+    "dataAgentApiId": "fabric-data-agent-obo",
+    "dataAgentApiPath": "fabric-data-agent",
+    "dataAgentMcpDisplayName": "Fabric Data Agent MCP",
+    "dataAgentMcpPath": "fabric-data-agent-mcp",
+    "inferenceApis": {
+      "lakehouse": {
+        "id": "fabric-foundry-lakehouse-inference",
+        "path": "fabric-foundry-inference/lakehouse"
+      },
+      "dataAgent": {
+        "id": "fabric-foundry-data-agent-inference",
+        "path": "fabric-foundry-inference/data-agent"
+      }
+    },
+    "fabricProductId": "fabric",
+    "foundryProductId": "foundry",
+    "rateLimitCalls": 30,
+    "rateLimitRenewalSeconds": 60,
+    "modelTokenLimitPerMinute": 25000,
+    "requestTimeoutSeconds": 180
+  },
+  "foundry": {
+    "accountName": "foundry-fabric-costops",
+    "projectName": "fabric-costops",
+    "location": "westus",
+    "vnetResourceId": "/subscriptions/cf824570-a8ba-497a-a184-0a52f1830aa9/resourceGroups/m365-myaacoub/providers/Microsoft.Network/virtualNetworks/caldova-apim-westus-vnet",
+    "agentSubnetName": "foundry-costops-agent",
+    "agentSubnetPrefix": "10.191.3.0/24",
+    "privateEndpointSubnetResourceId": "/subscriptions/cf824570-a8ba-497a-a184-0a52f1830aa9/resourceGroups/m365-myaacoub/providers/Microsoft.Network/virtualNetworks/caldova-apim-westus-vnet/subnets/private-endpoints",
+    "model": {
+      "name": "gpt-5.6-sol",
+      "version": "2026-07-09",
+      "format": "OpenAI",
+      "skuName": "GlobalStandard",
+      "capacity": 50
+    },
+    "modelConnections": {
+      "lakehouse": "lakehouse-ai-gateway",
+      "dataAgent": "data-agent-ai-gateway"
+    },
+    "knowledgeBases": {
+      "lakehouse": {
+        "searchEndpoint": "https://semiconductor-search-myaacoub.search.windows.net",
+        "searchServiceName": "semiconductor-search-myaacoub",
+        "knowledgeSourceName": "parts-shortages-lakehouse",
+        "knowledgeBaseName": "parts-shortages-lakehouse-kb",
+        "connectionName": "parts-shortages-lakehouse-kb",
+        "serverLabel": "parts-shortages-knowledge",
+        "embeddingDeployment": "text-embedding-3-small-iq",
+        "outputMode": "extractiveData",
+        "retrievalReasoningEffort": "minimal",
+        "snapshotPath": "Files/foundry-iq/parts-shortages/open",
+        "batchSize": 100
+      }
+    },
+    "fabricDataAgent": {
+      "connectionName": "parts-shortages-data-agent-native"
+    },
+    "mcpConnections": {
+      "lakehouse": {
+        "name": "lakehouse-mcp-oauth",
+        "appDisplayName": "Fabric CostOps Lakehouse Agent OAuth",
+        "serverLabel": "fabric-lakehouse",
+        "apiPath": "fabric-lakehouse-mcp/mcp",
+        "allowedTools": [
+          "tables",
+          "query"
+        ]
+      },
+      "dataAgent": {
+        "name": "data-agent-mcp-oauth",
+        "appDisplayName": "Fabric CostOps Data Agent OAuth",
+        "serverLabel": "fabric-data-agent",
+        "apiPath": "fabric-data-agent-mcp/mcp",
+        "allowedTools": [
+          "query"
+        ]
+      }
+    },
+    "agents": {
+      "lakehouse": "fabric-lakehouse-costops",
+      "dataAgent": "fabric-data-agent-costops"
+    }
+  },
+  "identity": {
+    "resourceTenantId": "12a4b86b-e64c-43f9-af05-d9130a72dfd2",
+    "callerTenantId": "12a4b86b-e64c-43f9-af05-d9130a72dfd2",
+    "apiDisplayName": "Fabric Parts Shortages OBO API",
+    "brokerApiDisplayName": "Fabric OBO Broker Caller API",
+    "lakehouseConnectorDisplayName": "Fabric Lakehouse OBO Connector",
+    "dataAgentConnectorDisplayName": "Fabric Data Agent OBO Connector",
+    "dashboardClientDisplayName": "Fabric Tokenomics Dashboard",
+    "delegatedScope": "Fabric.Access",
+    "brokerApplicationRole": "Fabric.Broker.Invoke",
+    "fabricApiScope": "https://api.fabric.microsoft.com/.default",
+    "powerBiApiScope": "https://analysis.windows.net/powerbi/api/.default",
+    "downstreamDelegatedPermissions": [
+      "DataAgent.Execute.All",
+      "Lakehouse.Read.All",
+      "SQLEndpoint.Read.All"
+    ],
+    "allowedUserPrincipalName": "admin@caldova37587778.onmicrosoft.com",
+    "allowedUserObjectIds": [
+      "715bb744-31d0-4f76-ac85-7193bcf5a4eb"
+    ]
+  },
+  "network": {
+    "mode": "single-tenant-existing-peering",
+    "brokerVnetResourceId": "/subscriptions/cf824570-a8ba-497a-a184-0a52f1830aa9/resourceGroups/m365-myaacoub/providers/Microsoft.Network/virtualNetworks/caldova-dbx-vnet-westus2",
+    "brokerPrivateEndpointSubnetResourceId": "/subscriptions/cf824570-a8ba-497a-a184-0a52f1830aa9/resourceGroups/m365-myaacoub/providers/Microsoft.Network/virtualNetworks/caldova-dbx-vnet-westus2/subnets/private-endpoints",
+    "brokerIntegrationSubnetResourceId": "/subscriptions/cf824570-a8ba-497a-a184-0a52f1830aa9/resourceGroups/m365-myaacoub/providers/Microsoft.Network/virtualNetworks/caldova-dbx-vnet-westus2/subnets/genie-obo-integration",
+    "brokerExistingPrivateDnsVnetLinks": {
+      "web": "genie-obo-caldova-dbx-vnet-westus2",
+      "blob": "genie-obo-databricks"
+    },
+    "apimVnetResourceId": "/subscriptions/cf824570-a8ba-497a-a184-0a52f1830aa9/resourceGroups/m365-myaacoub/providers/Microsoft.Network/virtualNetworks/caldova-apim-westus-vnet",
+    "apimSubnetName": "apim-outbound-integration",
+    "apimSubnetPrefix": "10.191.0.0/24",
+    "apimPrivateEndpointSubnetResourceId": "/subscriptions/cf824570-a8ba-497a-a184-0a52f1830aa9/resourceGroups/m365-myaacoub/providers/Microsoft.Network/virtualNetworks/caldova-apim-westus-vnet/subnets/private-endpoints",
+    "powerPlatformPrimarySubnetResourceId": "/subscriptions/cf824570-a8ba-497a-a184-0a52f1830aa9/resourceGroups/m365-myaacoub/providers/Microsoft.Network/virtualNetworks/caldova-pp-vnet-canadacentral/subnets/power-platform-subnet",
+    "powerPlatformSecondarySubnetResourceId": "/subscriptions/cf824570-a8ba-497a-a184-0a52f1830aa9/resourceGroups/m365-myaacoub/providers/Microsoft.Network/virtualNetworks/caldova-pp-vnet-canadaeast/subnets/power-platform-subnet",
+    "fabricPrivateLinkServiceResourceId": "",
+    "workspacePrivateLinkBlocker": "Power BI semantic models and external Copilot integrations are unsupported with workspace-level Private Link."
+  },
+  "broker": {
+    "appName": "caldova-fabric-obo-fn",
+    "existingPlanName": "caldova-showcase-plan",
+    "runtime": "~22",
+    "alwaysOn": true,
+    "jwkFetchTimeoutMs": 5000,
+    "tokenExchangeTimeoutMs": 15000,
+    "sqlConnectTimeoutMs": 30000,
+    "sqlRequestTimeoutMs": 120000,
+    "maxRows": 1000,
+    "maxStatementLength": 10000
+  },
+  "tokenomics": {
+    "projectId": "fabric-parts-shortages",
+    "teamId": "unassigned",
+    "costCenter": "unassigned",
+    "currency": "USD",
+    "rateCard": [],
+    "actualCost": {
+      "enabled": false,
+      "scope": "",
+      "queryApiVersion": "2023-11-01",
+      "billingLagHours": 24,
+      "trackedResources": []
+    }
+  },
+  "powerPlatform": {
+    "tenantId": "12a4b86b-e64c-43f9-af05-d9130a72dfd2",
+    "environmentId": "52456fcd-1d20-ecdb-aa2e-8979e3f794f5",
+    "environmentUrl": "https://orgadfd9fe9.crm3.dynamics.com",
+    "environmentDisplayName": "Caldova Private",
+    "publisherPrefix": "caldova",
+    "lakehouseConnectorName": "Fabric Lakehouse OBO Private",
+    "dataAgentConnectorName": "Fabric Data Agent OBO Private",
+    "lakehouseAgentName": "Fabric Parts Shortages Analyst",
+    "dataAgentAgentName": "Fabric Data Agent Analyst",
+    "lakehouseAgentSchemaName": "caldova_fabricPartsShortagesAnalyst",
+    "dataAgentAgentSchemaName": "caldova_fabricDataAgentAnalyst",
+    "lakehouseAgentSolutionName": "caldova_FabricPartsShortagesAnalyst",
+    "dataAgentAgentSolutionName": "caldova_FabricDataAgentAnalyst",
+    "lakehouseDeckPromptName": "Create Fabric Lakehouse Executive PowerPoint",
+    "dataAgentDeckPromptName": "Create Fabric Data Agent Executive PowerPoint",
+    "iconBrandColor": "#0078D4"
+  },
+  "deployment": {
+    "environmentName": "fabric-parts-shortages",
+    "deployNetworking": false,
+    "deployWorkspacePrivateLink": false,
+    "deployBroker": true,
+    "deployApimApis": true,
+    "deployFoundry": true,
+    "deployUi": false,
+    "deployTokenomicsData": false,
+    "deployTokenomicsSeed": false,
+    "deployTokenomicsFabric": false,
+    "deployTokenomicsSync": false,
+    "deployTokenomicsPowerBi": false,
+    "createCopilotStudioAgents": true
+  },
+  "tags": {
+    "application": "fabric-parts-shortages-agents",
+    "environment": "customer"
+  }
+}

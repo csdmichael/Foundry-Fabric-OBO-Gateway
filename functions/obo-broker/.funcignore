@@ -1,0 +1,7 @@
+.git*
+.vscode
+dist/test
+local.settings.json
+test
+tsconfig.json
+*.log

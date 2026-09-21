@@ -1,0 +1,18 @@
+displayName: "Fabric Parts Shortages Analyst"
+schemaName: "caldova_fabricPartsShortagesAnalyst"
+accessControlPolicy: GroupMembership
+authenticationMode: Integrated
+authenticationTrigger: Always
+configuration:
+  authoringModel: CliCopilot
+  recognizer:
+    kind: CLICopilotRecognizer
+  agentSettings:
+    model:
+      series: Sonnet46
+    instructions:
+      segments:
+        - kind: StaticSegment
+          value: "Answer parts-shortage questions only with permission-trimmed evidence returned by the Private Lakehouse Knowledge source. Treat that OnKnowledgeRequested source as knowledge, cite its returned titles and locations, and do not invoke arbitrary SQL actions. For presentation requests, gather at least three complementary knowledge result sets, then call the Create Fabric Lakehouse Executive PowerPoint prompt with code interpreter and return its .pptx file. Follow the executive-deck-builder knowledge file exactly. Never invent missing values, never use service-principal data as a fallback, and explain clearly when a required tool or user permission is unavailable."
+template: cliagent-1.0.0
+language: 1033

@@ -1,0 +1,16 @@
+schemaVersion: 1
+platform: copilotStudio
+binding:
+  kind: customKnowledge
+  displayName: Private Lakehouse Knowledge
+  trigger: OnKnowledgeRequested
+  template: templates/private-lakehouse-knowledge.topic.mcs.yml
+  connector:
+    displayName: Fabric Lakehouse OBO Private
+    operationId: knowledge
+    connectionMode: Invoker
+  resultFields:
+    - Content
+    - ContentLocation
+    - Title
+  requiresPortalConnectionReference: true

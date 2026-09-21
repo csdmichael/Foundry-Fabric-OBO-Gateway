@@ -1,0 +1,343 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.47.16.16243",
+      "templateHash": "7552648739968560134"
+    }
+  },
+  "parameters": {
+    "accountName": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 64,
+      "metadata": {
+        "description": "Microsoft Foundry account name."
+      }
+    },
+    "projectName": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 64,
+      "metadata": {
+        "description": "Microsoft Foundry project name."
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Foundry and VNet region."
+      }
+    },
+    "vnetResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Existing VNet resource ID. The VNet must be in the Foundry region."
+      }
+    },
+    "agentSubnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Exclusive subnet name for this Foundry account capability host."
+      }
+    },
+    "agentSubnetPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "CIDR for the exclusive Foundry agent subnet."
+      }
+    },
+    "privateEndpointSubnetResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Existing subnet resource ID used for Foundry private endpoints."
+      }
+    },
+    "modelName": {
+      "type": "string",
+      "metadata": {
+        "description": "Model deployment name and catalog model name."
+      }
+    },
+    "modelFormat": {
+      "type": "string",
+      "metadata": {
+        "description": "Model provider format."
+      }
+    },
+    "modelVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "Pinned model version."
+      }
+    },
+    "modelSkuName": {
+      "type": "string",
+      "metadata": {
+        "description": "Model deployment SKU."
+      }
+    },
+    "modelCapacity": {
+      "type": "int",
+      "minValue": 1,
+      "metadata": {
+        "description": "Model deployment capacity in thousands of tokens per minute."
+      }
+    },
+    "apimPrincipalId": {
+      "type": "string",
+      "metadata": {
+        "description": "System-assigned APIM principal that calls the private model backend."
+      }
+    },
+    "currentDeployerPrincipalId": {
+      "type": "string",
+      "metadata": {
+        "description": "Current deployment principal that creates and validates prompt agents."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Customer tags from the shared deployment configuration."
+      }
+    }
+  },
+  "variables": {
+    "vnetParts": "[split(parameters('vnetResourceId'), '/')]",
+    "vnetName": "[variables('vnetParts')[8]]",
+    "privateEndpointSubnetParts": "[split(parameters('privateEndpointSubnetResourceId'), '/')]",
+    "privateEndpointSubnetName": "[variables('privateEndpointSubnetParts')[10]]",
+    "privateEndpointName": "[take(format('pe-{0}', parameters('accountName')), 64)]",
+    "cognitiveServicesUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')]",
+    "foundryProjectManagerRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'eadc314b-1a2d-4efa-be10-5d325db5065e')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks/subnets",
+      "apiVersion": "2024-05-01",
+      "name": "[format('{0}/{1}', variables('vnetName'), parameters('agentSubnetName'))]",
+      "properties": {
+        "addressPrefix": "[parameters('agentSubnetPrefix')]",
+        "defaultOutboundAccess": false,
+        "delegations": [
+          {
+            "name": "Microsoft.App/environments",
+            "properties": {
+              "serviceName": "Microsoft.App/environments"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2025-06-01",
+      "name": "[parameters('accountName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "kind": "AIServices",
+      "sku": {
+        "name": "S0"
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "allowProjectManagement": true,
+        "customSubDomainName": "[parameters('accountName')]",
+        "disableLocalAuth": true,
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "defaultAction": "Deny",
+          "ipRules": [],
+          "virtualNetworkRules": []
+        },
+        "networkInjections": [
+          {
+            "scenario": "agent",
+            "subnetArmId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), parameters('agentSubnetName'))]",
+            "useMicrosoftManagedNetwork": false
+          }
+        ],
+        "publicNetworkAccess": "Disabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), parameters('agentSubnetName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/deployments",
+      "apiVersion": "2025-06-01",
+      "name": "[format('{0}/{1}', parameters('accountName'), parameters('modelName'))]",
+      "sku": {
+        "capacity": "[parameters('modelCapacity')]",
+        "name": "[parameters('modelSkuName')]"
+      },
+      "properties": {
+        "model": {
+          "format": "[parameters('modelFormat')]",
+          "name": "[parameters('modelName')]",
+          "version": "[parameters('modelVersion')]"
+        },
+        "versionUpgradeOption": "NoAutoUpgrade"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints",
+      "apiVersion": "2024-05-01",
+      "name": "[variables('privateEndpointName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "privateLinkServiceConnections": [
+          {
+            "name": "account",
+            "properties": {
+              "groupIds": [
+                "account"
+              ],
+              "privateLinkServiceId": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]"
+            }
+          }
+        ],
+        "subnet": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('privateEndpointSubnetName'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+      "apiVersion": "2024-05-01",
+      "name": "[format('{0}/{1}', variables('privateEndpointName'), 'default')]",
+      "properties": {
+        "privateDnsZoneConfigs": [
+          {
+            "name": "cognitive-services",
+            "properties": {
+              "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.cognitiveservices.azure.com')]"
+            }
+          },
+          {
+            "name": "openai",
+            "properties": {
+              "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.openai.azure.com')]"
+            }
+          },
+          {
+            "name": "foundry",
+            "properties": {
+              "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.services.ai.azure.com')]"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/projects",
+      "apiVersion": "2025-06-01",
+      "name": "[format('{0}/{1}', parameters('accountName'), parameters('projectName'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "description": "Private Fabric CostOps prompt agents governed by Azure API Management.",
+        "displayName": "[parameters('projectName')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]",
+        "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', variables('privateEndpointName'), 'default')]"
+      ]
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/projects/capabilityHosts",
+      "apiVersion": "2025-06-01",
+      "name": "[format('{0}/{1}/{2}', parameters('accountName'), parameters('projectName'), 'caphostproj')]",
+      "properties": {
+        "capabilityHostKind": "Agents"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]",
+      "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), parameters('apimPrincipalId'), variables('cognitiveServicesUserRoleDefinitionId'))]",
+      "properties": {
+        "principalId": "[parameters('apimPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('cognitiveServicesUserRoleDefinitionId')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName'))]",
+      "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName')), parameters('currentDeployerPrincipalId'), variables('foundryProjectManagerRoleDefinitionId'))]",
+      "properties": {
+        "principalId": "[parameters('currentDeployerPrincipalId')]",
+        "roleDefinitionId": "[variables('foundryProjectManagerRoleDefinitionId')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "accountId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]"
+    },
+    "accountName": {
+      "type": "string",
+      "value": "[parameters('accountName')]"
+    },
+    "modelDeploymentName": {
+      "type": "string",
+      "value": "[parameters('modelName')]"
+    },
+    "projectEndpoint": {
+      "type": "string",
+      "value": "[format('https://{0}.services.ai.azure.com/api/projects/{1}', parameters('accountName'), parameters('projectName'))]"
+    },
+    "projectId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName'))]"
+    },
+    "projectName": {
+      "type": "string",
+      "value": "[parameters('projectName')]"
+    },
+    "projectPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName')), '2025-06-01', 'full').identity.principalId]"
+    },
+    "agentSubnetId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), parameters('agentSubnetName'))]"
+    },
+    "privateEndpointId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]"
+    }
+  }
+}
