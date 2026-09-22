@@ -44,6 +44,8 @@ Private APIM provides the governed gateway for both Copilot Studio and Microsoft
 3. **Enterprise Zero-Trust Security**:
    - Private network isolation (`caldova-apim-westus-vnet` with `caldova-dbx-vnet-westus2` peering).
    - Strict MSAL Node OBO token exchange preserving user identity and permissions down to Fabric SQL Endpoint and Fabric REST APIs.
+   - A named blocking Foundry guardrail with medium-threshold harm filters and Prompt Shields for user and indirect attacks.
+   - Managed release evaluations for task adherence, indirect-attack resistance, and content safety on both Foundry agent versions.
    - Fail-closed token validation and sanitized diagnostics.
 
 ---
@@ -132,6 +134,8 @@ Checks validated:
 - TypeScript compilation and 23 broker unit tests
 - Dependency security audit (`npm audit --omit=dev`)
 - Power Platform solution packaging and schema integrity
+- Four-agent prompt-injection, content-safety, and capability contracts
+- Foundry managed-evaluation payload, dataset, and release-gate tests
 - APIM OpenAPI specifications and XML policy syntax
 - Bicep template syntax and linter rules
 - Terraform configuration validation

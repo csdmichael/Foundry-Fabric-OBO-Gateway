@@ -55,7 +55,9 @@ var vnetName = vnetParts[8]
 var privateEndpointSubnetParts = split(privateEndpointSubnetResourceId, '/')
 var privateEndpointSubnetName = privateEndpointSubnetParts[10]
 var privateEndpointName = take('pe-${accountName}', 64)
+var raiPolicyName = 'fabric-costops-content-safety'
 var cognitiveServicesUserRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')
+var foundryUserRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '53ca6127-db72-4b80-b1b0-d745d6d5456d')
 var foundryProjectManagerRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'eadc314b-1a2d-4efa-be10-5d325db5065e')
 
 resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' existing = {
@@ -117,6 +119,46 @@ resource foundryAccount 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
   }
 }
 
+resource contentSafetyPolicy 'Microsoft.CognitiveServices/accounts/raiPolicies@2025-06-01' = {
+  parent: foundryAccount
+  name: raiPolicyName
+  properties: {
+    basePolicyName: 'Microsoft.DefaultV2'
+    mode: 'Blocking'
+    contentFilters: concat(
+      flatten(map([
+        'Hate'
+        'Sexual'
+        'Violence'
+        'Selfharm'
+      ], category => map([
+        'Prompt'
+        'Completion'
+      ], source => {
+        name: category
+        severityThreshold: 'Medium'
+        blocking: true
+        enabled: true
+        source: source
+      }))),
+      [
+        {
+          name: 'Jailbreak'
+          blocking: true
+          enabled: true
+          source: 'Prompt'
+        }
+        {
+          name: 'Indirect Attack'
+          blocking: true
+          enabled: true
+          source: 'Prompt'
+        }
+      ]
+    )
+  }
+}
+
 #disable-next-line BCP081
 resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-06-01' = {
   parent: foundryAccount
@@ -131,6 +173,7 @@ resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-
       name: modelName
       version: modelVersion
     }
+    raiPolicyName: contentSafetyPolicy.name
     versionUpgradeOption: 'NoAutoUpgrade'
   }
 }
@@ -221,6 +264,16 @@ resource projectCapabilityHost 'Microsoft.CognitiveServices/accounts/projects/ca
   })
 }
 
+resource projectFoundryUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: foundryAccount
+  name: guid(foundryAccount.id, project.id, foundryUserRoleDefinitionId)
+  properties: {
+    principalId: project.identity.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: foundryUserRoleDefinitionId
+  }
+}
+
 resource apimModelRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: foundryAccount
   name: guid(foundryAccount.id, apimPrincipalId, cognitiveServicesUserRoleDefinitionId)
@@ -242,6 +295,7 @@ resource deployerProjectManagerRole 'Microsoft.Authorization/roleAssignments@202
 
 output accountId string = foundryAccount.id
 output accountName string = foundryAccount.name
+output contentSafetyPolicyName string = contentSafetyPolicy.name
 output modelDeploymentName string = modelDeployment.name
 output projectEndpoint string = 'https://${foundryAccount.name}.services.ai.azure.com/api/projects/${project.name}'
 output projectId string = project.id

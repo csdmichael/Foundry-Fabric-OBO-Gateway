@@ -5,7 +5,8 @@ param(
     [string] $OutputPath = (Join-Path $PSScriptRoot '../.generated/foundry-agents.json'),
     [string] $FoundryAccessIpAddress,
     [int] $CredentialLifetimeMonths = 6,
-    [switch] $SkipSmokeTest
+    [switch] $SkipSmokeTest,
+    [switch] $SkipEvaluations
 )
 
 $ErrorActionPreference = 'Stop'
@@ -221,6 +222,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Unable to install pinned Foundry provisioning dependencies.' }
     & $venvPython (Join-Path $PSScriptRoot 'test/test_foundry_knowledge.py')
     if ($LASTEXITCODE -ne 0) { throw 'Foundry knowledge-source tests failed.' }
+    & $venvPython (Join-Path $PSScriptRoot 'test/test_foundry_evaluations.py')
+    if ($LASTEXITCODE -ne 0) { throw 'Foundry managed-evaluation tests failed.' }
     $pythonArguments = @(
         (Join-Path $PSScriptRoot 'provision-foundry-agents.py'),
         '--config', $ConfigPath,
@@ -228,6 +231,7 @@ try {
         '--output', $OutputPath
     )
     if ($SkipSmokeTest) { $pythonArguments += '--skip-smoke-test' }
+    if ($SkipEvaluations) { $pythonArguments += '--skip-evaluations' }
     & $venvPython @pythonArguments
     if ($LASTEXITCODE -ne 0) { throw 'Foundry Prompt Agent provisioning or smoke testing failed.' }
     $resolvedOutputPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputPath)
@@ -239,6 +243,7 @@ try {
         ProjectEndpoint = $projectEndpoint
         Agents = @($agentMetadata.agents.name)
         SmokeTests = @($agentMetadata.agents.smokeTest)
+        Evaluations = @($agentMetadata.agents.evaluation.status)
     }
 }
 catch {

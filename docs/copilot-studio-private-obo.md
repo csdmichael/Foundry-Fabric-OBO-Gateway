@@ -245,6 +245,8 @@ Each agent instruction file contains a required four-item prompt menu. Validate 
 
 The Lakehouse prompts focus on current critical shortages, suppliers, due dates, mitigation paths, plants, severity, citations, and freshness. The Data Agent prompts focus on exposure by severity, supplier/plant risk, demand-supply gaps, and leadership actions.
 
+The checked-in pulled agents currently contain only their required invoker-authenticated connector tools. They do not advertise presentation generation. Add the optional executive PowerPoint prompt and Code Interpreter in Copilot Studio, test them, and pull both components into source before adding presentation behavior to the agent instructions.
+
 ## APIM MCP compatibility surfaces
 
 APIM also exposes private MCP projections:

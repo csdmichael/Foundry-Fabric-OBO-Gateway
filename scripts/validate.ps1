@@ -108,9 +108,16 @@ try {
     Invoke-FabricNative -FilePath 'python' -ArgumentList @(
         '-m', 'py_compile',
         'scripts/foundry_knowledge.py',
+        'scripts/foundry_evaluations.py',
         'scripts/provision-foundry-agents.py',
         'scripts/create-sales-poc-agents.py'
     ) -Description 'Foundry Python helper syntax'
+    Invoke-FabricNative -FilePath 'python' -ArgumentList @(
+        '-m', 'unittest',
+        'scripts.test.test_foundry_knowledge',
+        'scripts.test.test_foundry_evaluations',
+        'scripts.test.test_agent_safety_contracts'
+    ) -Description 'Foundry agent and evaluation tests'
     
     $tokens = $null
     $parseErrors = $null

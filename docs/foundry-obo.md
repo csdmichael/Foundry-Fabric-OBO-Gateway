@@ -13,9 +13,10 @@ This runbook provisions and validates the two Microsoft Foundry agents used by t
 - [2. Configure Lakehouse knowledge](#2-configure-lakehouse-knowledge)
 - [3. Configure the Fabric Data Agent tool](#3-configure-the-fabric-data-agent-tool)
 - [4. Deploy the prompt agents](#4-deploy-the-prompt-agents)
-- [5. APIM policies](#5-apim-policies)
-- [6. Test and verify](#6-test-and-verify)
-- [7. Troubleshooting](#7-troubleshooting)
+- [5. Guardrails and managed evaluations](#5-guardrails-and-managed-evaluations)
+- [6. APIM policies](#6-apim-policies)
+- [7. Test and verify](#7-test-and-verify)
+- [8. Troubleshooting](#8-troubleshooting)
 - [Screenshot checklist](#screenshot-checklist)
 - [Microsoft Learn references](#microsoft-learn-references)
 
@@ -169,7 +170,23 @@ Expected definitions:
 | Lakehouse analyst | Foundry IQ `knowledge_base_retrieve` | Project managed identity |
 | Data Agent analyst | `fabric_dataagent_preview` | Signed-in user OBO |
 
-## 5. APIM policies
+## 5. Guardrails and managed evaluations
+
+The Foundry model deployment is assigned the `fabric-costops-content-safety` RAI policy in both Bicep and Terraform. The policy is based on `Microsoft.DefaultV2`, runs in blocking mode, filters hate, sexual, violence, and self-harm content at medium severity for prompts and completions, and enables Prompt Shields for user prompt and indirect attacks.
+
+The Foundry project managed identity receives the **Foundry User** role on the Foundry resource. This assignment is required for managed evaluation in the network-isolated project.
+
+Agent provisioning runs the versioned dataset in [safety-quality-v1.jsonl](../agents/foundry/evaluations/safety-quality-v1.jsonl) against each exact immutable agent version. The managed release gate uses:
+
+| Gate | Evaluators |
+| --- | --- |
+| Instruction and tool behavior | `builtin.task_adherence` using structured agent output |
+| Prompt-injection resistance | `builtin.indirect_attack` |
+| Content safety | `builtin.violence`, `builtin.sexual`, `builtin.self_harm`, `builtin.hate_unfairness` |
+
+Every scored criterion must pass. A failed, errored, canceled, empty, or timed-out run fails provisioning. Full run metadata and scored output items are saved under `.generated/foundry-evaluations/`, while the managed evaluation remains available in the Foundry project. `-SkipEvaluations` exists only for explicit recovery work and should not be used for a release deployment.
+
+## 6. APIM policies
 
 APIM governs model inference for the configured private Foundry project. [foundry-inference-policy.xml](../apim/policies/foundry-inference-policy.xml) validates the project identity, pins agent attribution, limits tokens, and authenticates to the model with managed identity:
 
@@ -188,7 +205,7 @@ APIM governs model inference for the configured private Foundry project. [foundr
 
 The native Fabric Data Agent tool goes directly from Foundry Agent Service to Fabric with user identity passthrough. It does not traverse the custom APIM Fabric API. If the compatibility MCP route is enabled, [fabric-obo-api-policy.xml](../apim/policies/fabric-obo-api-policy.xml) validates `Fabric.Access`, enforces the user/client allowlists, and forwards the user assertion to the broker.
 
-## 6. Test and verify
+## 7. Test and verify
 
 1. Open the latest agent version, not an older immutable version.
 2. Confirm **Knowledge** contains the Lakehouse knowledge base on the Lakehouse agent.
@@ -200,10 +217,12 @@ The native Fabric Data Agent tool goes directly from Foundry Agent Service to Fa
 
 ```powershell
 python -m unittest scripts.test.test_foundry_knowledge
+python -m unittest scripts.test.test_foundry_evaluations
+python -m unittest scripts.test.test_agent_safety_contracts
 python -m py_compile scripts/foundry_knowledge.py scripts/provision-foundry-agents.py
 ```
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 | Error | Resolution |
 | --- | --- |
@@ -214,6 +233,8 @@ python -m py_compile scripts/foundry_knowledge.py scripts/provision-foundry-agen
 | Data Agent not found | Publish it in Fabric and verify workspace/project tenant alignment. |
 | Foundry IQ 429 | Use a dedicated embedding deployment and `minimal` retrieval reasoning during heavy ingestion. |
 | Retrieval returns definitions but no current rows | Run `sync-parts-shortages-foundry-iq.ps1`, confirm the indexer processed the expected snapshot file count with zero failures, and invoke the latest agent version again. |
+| Evaluation run fails with authorization | Confirm the project managed identity has Foundry User on the Foundry resource. |
+| Evaluation release gate fails | Inspect the matching report under `.generated/foundry-evaluations/`, correct the agent instructions, tool binding, or dataset case, and rerun provisioning. |
 
 ## Screenshot checklist
 

@@ -21,7 +21,8 @@ param(
     [string] $RepositoryCommit = '',
     [switch] $AllowWhatIfModify,
     [switch] $ReusePrivateDnsZone,
-    [switch] $SkipFoundrySmokeTest
+    [switch] $SkipFoundrySmokeTest,
+    [switch] $SkipFoundryEvaluations
 )
 
 $ErrorActionPreference = 'Stop'
@@ -717,6 +718,7 @@ if (Test-Step 'foundry-agents') {
             IdentityPath = $IdentityPath
             FoundryAccessIpAddress = $UploadIpAddress
             SkipSmokeTest = [bool]$SkipFoundrySmokeTest
+            SkipEvaluations = [bool]$SkipFoundryEvaluations
         }
         & (Join-Path $PSScriptRoot 'provision-foundry-agents.ps1') @foundryAgentParameters
     }

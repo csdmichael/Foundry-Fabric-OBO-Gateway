@@ -8,8 +8,10 @@ locals {
   vnet_parts      = split("/", local.config.foundry.vnetResourceId)
   vnet_name       = local.vnet_parts[8]
   arm_namespace   = "11fb06fb-712d-4ddd-98c7-e71bbd588830"
+  rai_policy_name = "fabric-costops-content-safety"
 
   cognitive_services_user_role_id = "/subscriptions/${local.subscription_id}/providers/Microsoft.Authorization/roleDefinitions/a97b65f3-24c7-4388-baec-2e87135dc908"
+  foundry_user_role_id            = "/subscriptions/${local.subscription_id}/providers/Microsoft.Authorization/roleDefinitions/53ca6127-db72-4b80-b1b0-d745d6d5456d"
   foundry_project_manager_role_id = "/subscriptions/${local.subscription_id}/providers/Microsoft.Authorization/roleDefinitions/eadc314b-1a2d-4efa-be10-5d325db5065e"
 
   model_connections = {
@@ -85,6 +87,47 @@ resource "azapi_resource" "account" {
   }
 }
 
+resource "azapi_resource" "content_safety_policy" {
+  type                      = "Microsoft.CognitiveServices/accounts/raiPolicies@2025-06-01"
+  name                      = local.rai_policy_name
+  parent_id                 = azapi_resource.account.id
+  schema_validation_enabled = false
+
+  body = {
+    properties = {
+      basePolicyName = "Microsoft.DefaultV2"
+      mode           = "Blocking"
+      contentFilters = concat(
+        flatten([
+          for category in ["Hate", "Sexual", "Violence", "Selfharm"] : [
+            for source in ["Prompt", "Completion"] : {
+              name              = category
+              severityThreshold = "Medium"
+              blocking          = true
+              enabled           = true
+              source            = source
+            }
+          ]
+        ]),
+        [
+          {
+            name     = "Jailbreak"
+            blocking = true
+            enabled  = true
+            source   = "Prompt"
+          },
+          {
+            name     = "Indirect Attack"
+            blocking = true
+            enabled  = true
+            source   = "Prompt"
+          },
+        ]
+      )
+    }
+  }
+}
+
 resource "azapi_resource" "model" {
   type                      = "Microsoft.CognitiveServices/accounts/deployments@2025-06-01"
   name                      = local.config.foundry.model.name
@@ -102,6 +145,7 @@ resource "azapi_resource" "model" {
         name    = local.config.foundry.model.name
         version = local.config.foundry.model.version
       }
+      raiPolicyName        = azapi_resource.content_safety_policy.name
       versionUpgradeOption = "NoAutoUpgrade"
     }
   }
@@ -138,6 +182,14 @@ resource "azapi_resource" "project_capability_host" {
       capabilityHostKind = "Agents"
     }
   }
+}
+
+resource "azurerm_role_assignment" "project_foundry_user" {
+  name               = uuidv5(local.arm_namespace, "${azapi_resource.account.id}-${azapi_resource.project.id}-${local.foundry_user_role_id}")
+  scope              = azapi_resource.account.id
+  role_definition_id = local.foundry_user_role_id
+  principal_id       = azapi_resource.project.output.identity.principalId
+  principal_type     = "ServicePrincipal"
 }
 
 data "azurerm_private_dns_zone" "cognitive_services" {
