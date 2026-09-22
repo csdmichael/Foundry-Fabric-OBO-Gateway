@@ -1,0 +1,172 @@
+﻿{
+  "swagger": "2.0",
+  "info": {
+    "title": "Fabric Lakehouse OBO Private",
+    "version": "1.0.0",
+    "description": "Queries the private Microsoft Fabric Lakehouse API through APIM with delegated OBO authorization."
+  },
+  "host": "caldova-apim-westus.azure-api.net",
+  "basePath": "/fabric-lakehouse",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/knowledge": {
+      "post": {
+        "operationId": "knowledge",
+        "summary": "Search open Lakehouse shortages",
+        "description": "Returns up to 15 citation-ready snippets under the signed-in user permissions.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "query"
+              ],
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500,
+                  "description": "Context-aware knowledge search query.",
+                  "x-ms-summary": "Knowledge query"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Citation-ready Lakehouse knowledge results.",
+            "schema": {
+              "type": "object",
+              "required": [
+                "query",
+                "results"
+              ],
+              "properties": {
+                "query": {
+                  "type": "string"
+                },
+                "results": {
+                  "type": "array",
+                  "maxItems": 15,
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "snippet",
+                      "title",
+                      "url"
+                    ],
+                    "properties": {
+                      "snippet": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string",
+                        "format": "uri"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/query": {
+      "post": {
+        "operationId": "query",
+        "summary": "Run a read-only Lakehouse query",
+        "description": "Runs one read-only SQL statement under the signed-in user permissions.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "statement"
+              ],
+              "properties": {
+                "statement": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 10000,
+                  "description": "One read-only SQL SELECT or CTE statement.",
+                  "x-ms-summary": "SQL statement"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lakehouse query result."
+          }
+        }
+      }
+    },
+    "/tables": {
+      "get": {
+        "operationId": "tables",
+        "summary": "List visible Lakehouse tables",
+        "description": "Lists Lakehouse tables visible under the signed-in user permissions.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Visible Lakehouse tables."
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "oauth2": {
+      "type": "oauth2",
+      "flow": "accessCode",
+      "authorizationUrl": "https://login.microsoftonline.com/12a4b86b-e64c-43f9-af05-d9130a72dfd2/oauth2/authorize",
+      "tokenUrl": "https://login.microsoftonline.com/12a4b86b-e64c-43f9-af05-d9130a72dfd2/oauth2/token",
+      "scopes": {
+        "Fabric.Access": "Access Microsoft Fabric under the signed-in user permissions."
+      }
+    }
+  },
+  "security": [
+    {
+      "oauth2": [
+        "Fabric.Access"
+      ]
+    }
+  ]
+}

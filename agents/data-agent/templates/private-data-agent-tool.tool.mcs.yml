@@ -1,0 +1,10 @@
+# Name: Fabric Data Agent
+# Bind the placeholders from a Copilot Studio-created invoker connection reference.
+mcs.metadata:
+  componentName: Query the Fabric Data Agent
+  description: Asks a natural-language question under the signed-in user's permissions.
+kind: ConnectorTool
+authMode: Invoker
+connectionReference: __CONNECTION_REFERENCE_SCHEMA_NAME__
+connectorId: /providers/Microsoft.PowerApps/apis/__CONNECTOR_RUNTIME_ID__
+operationId: query

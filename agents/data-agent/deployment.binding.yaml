@@ -3,7 +3,7 @@ platform: copilotStudio
 binding:
   kind: connectorTool
   displayName: Fabric Data Agent
-  template: templates/private-data-agent-tool.action.mcs.yml
+  template: templates/private-data-agent-tool.tool.mcs.yml
   connector:
     displayName: Fabric Data Agent OBO Private
     operationId: query

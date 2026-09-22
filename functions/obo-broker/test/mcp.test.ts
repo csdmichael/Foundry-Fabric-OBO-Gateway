@@ -16,7 +16,7 @@ test('initializes MCP, discovers its tool and calls the discovered question argu
     methods.push(body.method);
     const headers = new Headers({ 'Content-Type': 'application/json' });
     if (body.method === 'initialize') headers.set('Mcp-Session-Id', 'session-1');
-    if (body.method === 'notifications/initialized') return new Response('', { status: 202, headers });
+    if (body.method === 'notifications/initialized') return new Response('Accepted', { status: 202, headers });
     if (body.method === 'tools/list') return Response.json({ jsonrpc: '2.0', id: 2, result: { tools: [{ name: 'ask_data_agent', inputSchema: { properties: { question: { type: 'string' } } } }] } }, { headers });
     if (body.method === 'tools/call') {
       assert.deepEqual(body.params, { name: 'ask_data_agent', arguments: { question: 'Which parts are short?' } });

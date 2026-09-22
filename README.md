@@ -37,8 +37,9 @@ Private APIM provides the governed gateway for both Copilot Studio and Microsoft
    - **Data Agent Tool**: Integrated as native Fabric Data Agent tool (`fabric_dataagent_preview`), enabling conversational queries over Fabric operational data.
 
 2. **Copilot Studio Private OBO Integration**:
-   - **Fabric Lakehouse Analyst**: Custom knowledge pattern using the `OnKnowledgeRequested` trigger to query `POST /fabric-lakehouse/knowledge`.
-   - **Fabric Data Agent Analyst**: Invoker-authenticated action using solution-aware custom connectors (`caldova_FabricDataAgentAnalyst`) requiring interactive end-user consent.
+   - **Fabric Lakehouse Analyst**: Invoker-authenticated `ConnectorTool` for `POST /fabric-lakehouse/knowledge`, returning bounded citation-ready snippets.
+   - **Fabric Data Agent Analyst**: Invoker-authenticated `ConnectorTool` for `POST /fabric-data-agent/query`, preserving Fabric response qualifications.
+   - **Suggested prompts**: Both Copilot Studio agents and both Foundry agents expose four domain-specific starter prompts through their versioned instructions.
 
 3. **Enterprise Zero-Trust Security**:
    - Private network isolation (`caldova-apim-westus-vnet` with `caldova-dbx-vnet-westus2` peering).
@@ -145,7 +146,8 @@ Deploy using `scripts/deploy.ps1`:
 # 1. Run preflight checks
 .\scripts\deploy.ps1 -Step preflight
 
-# 2. Package and deploy broker Function App
+# 2. Build and upload the broker package, then deploy/restart the Function App
+.\scripts\deploy.ps1 -Step package
 .\scripts\deploy.ps1 -Step broker-app
 
 # 3. Configure APIM APIs and policies
@@ -165,6 +167,25 @@ Deploy using `scripts/deploy.ps1`:
 
 - **Microsoft Foundry**: Refer to [docs/foundry-obo.md](docs/foundry-obo.md) for step-by-step setup of Foundry IQ OneLake Knowledge, Fabric Data Agent tools, APIM OAuth connections, and agent orchestration.
 - **Microsoft Copilot Studio**: Refer to [docs/copilot-studio-private-obo.md](docs/copilot-studio-private-obo.md) for custom connector creation, maker connection authentication, solution import, invoker consent flow, and troubleshooting.
+
+### Refresh Foundry IQ shortage data
+
+Publish a current row-level `OPEN` shortage snapshot and run the generated OneLake indexer:
+
+```powershell
+.\scripts\sync-parts-shortages-foundry-iq.ps1
+```
+
+The command writes `open-shortages-*.md` batches under `Files/foundry-iq/parts-shortages/open`, removes stale snapshot files, and starts the knowledge source's generated Azure AI Search indexer.
+
+### Validate APIM MCP projections
+
+The private APIM service exposes compatibility MCP projections at:
+
+- `https://caldova-apim-westus.azure-api.net/fabric-lakehouse-mcp/mcp` (`tables`, `query`)
+- `https://caldova-apim-westus.azure-api.net/fabric-data-agent-mcp/mcp` (`query`)
+
+These resources use the APIM `2024-06-01-preview` API contract, are linked to the published `fabric` product, require delegated OBO authorization, and intentionally return `403` from public networks. Copilot Studio uses the VNet-supported REST custom connectors rather than direct MCP discovery.
 
 ---
 

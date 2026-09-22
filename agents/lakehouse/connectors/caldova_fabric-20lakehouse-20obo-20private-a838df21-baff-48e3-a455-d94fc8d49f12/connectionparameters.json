@@ -1,0 +1,45 @@
+﻿{
+  "token": {
+    "type": "oauthSetting",
+    "oAuthSettings": {
+      "identityProvider": "aad",
+      "clientId": "d1420c8a-5397-4f9a-9af2-f7e710772cda",
+      "scopes": [
+        "Fabric.Access"
+      ],
+      "redirectMode": "GlobalPerConnector",
+      "redirectUrl": "https://global.consent.azure-apim.net/redirect/fabric-20lakehouse-20obo-20private-5f29e467ef71-a3f88c180f25a030",
+      "properties": {
+        "IsFirstParty": "True",
+        "AzureActiveDirectoryResourceId": "api://3a9e9b7d-7354-4efd-b724-d9f566c67fd1",
+        "IsOnbehalfofLoginSupported": true
+      },
+      "customParameters": {
+        "LoginUri": {
+          "value": "https://login.microsoftonline.com"
+        },
+        "TenantId": {
+          "value": "12a4b86b-e64c-43f9-af05-d9130a72dfd2"
+        },
+        "ResourceUri": {
+          "value": "api://3a9e9b7d-7354-4efd-b724-d9f566c67fd1"
+        },
+        "EnableOnbehalfOfLogin": {
+          "value": "true"
+        }
+      }
+    }
+  },
+  "token:TenantId": {
+    "type": "string",
+    "metadata": {
+      "sourceType": "AzureActiveDirectoryTenant"
+    },
+    "uiDefinition": {
+      "constraints": {
+        "required": "false",
+        "hidden": "true"
+      }
+    }
+  }
+}

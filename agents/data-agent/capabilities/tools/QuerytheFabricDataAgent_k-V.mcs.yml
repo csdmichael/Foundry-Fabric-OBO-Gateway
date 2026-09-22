@@ -1,0 +1,8 @@
+mcs.metadata:
+  componentName: Query the Fabric Data Agent
+  description: Asks a natural-language question under the signed-in user permissions.
+kind: ConnectorTool
+authMode: Invoker
+connectionReference: caldova_fabricDataAgentAnalyst.cr.shared_fabric-20data.4262d11f178c481697c96ba275029196
+connectorId: /providers/Microsoft.PowerApps/apis/shared_fabric-20data-20agent-20obo-20private-5f29e467e-d34fd7d66fd7a912
+operationId: query

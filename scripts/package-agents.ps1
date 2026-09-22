@@ -29,7 +29,7 @@ $agents = @(
         SolutionName = [string]$config.powerPlatform.lakehouseAgentSolutionName
         ConnectorName = [string]$config.powerPlatform.lakehouseConnectorName
         PromptName = [string]$config.powerPlatform.lakehouseDeckPromptName
-        InstructionMarker = 'Private Lakehouse Knowledge source'
+        InstructionMarker = 'Search open Lakehouse shortages tool'
     },
     [pscustomobject]@{
         ProjectDirectory = Join-Path $fabricRoot 'agents/data-agent'

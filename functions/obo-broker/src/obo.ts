@@ -23,7 +23,6 @@ export function createOboClient(config: BrokerConfig): OboClient {
       clientSecret: config.apiClientSecret,
       authority: `https://login.microsoftonline.com/${config.resourceTenantId}`,
     },
-    system: { networkClient: undefined },
   });
 }
 

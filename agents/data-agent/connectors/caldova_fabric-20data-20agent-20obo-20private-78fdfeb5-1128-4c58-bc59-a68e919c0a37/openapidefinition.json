@@ -1,0 +1,80 @@
+﻿{
+  "swagger": "2.0",
+  "info": {
+    "title": "Fabric Data Agent OBO Private",
+    "version": "1.0.0",
+    "description": "Queries the published Microsoft Fabric Data Agent through APIM with delegated OBO authorization."
+  },
+  "host": "caldova-apim-westus.azure-api.net",
+  "basePath": "/fabric-data-agent",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/query": {
+      "post": {
+        "operationId": "query",
+        "summary": "Query the Fabric Data Agent",
+        "description": "Asks a natural-language question under the signed-in user permissions.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "question"
+              ],
+              "properties": {
+                "question": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4000,
+                  "description": "The natural-language question for the published Fabric Data Agent.",
+                  "x-ms-summary": "Question"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fabric Data Agent response."
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "oauth2": {
+      "type": "oauth2",
+      "flow": "accessCode",
+      "authorizationUrl": "https://login.microsoftonline.com/12a4b86b-e64c-43f9-af05-d9130a72dfd2/oauth2/authorize",
+      "tokenUrl": "https://login.microsoftonline.com/12a4b86b-e64c-43f9-af05-d9130a72dfd2/oauth2/token",
+      "scopes": {
+        "Fabric.Access": "Access Microsoft Fabric under the signed-in user permissions."
+      }
+    }
+  },
+  "security": [
+    {
+      "oauth2": [
+        "Fabric.Access"
+      ]
+    }
+  ]
+}

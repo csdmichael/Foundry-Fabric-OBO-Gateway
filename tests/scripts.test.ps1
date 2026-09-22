@@ -96,16 +96,16 @@ Write-Host 'PASS Copilot Studio connector OBO contract'
 
 $lakehouseSync = Get-Content -LiteralPath (Join-Path $PSScriptRoot '../agents/lakehouse/deployment.binding.yaml') -Raw
 $dataAgentSync = Get-Content -LiteralPath (Join-Path $PSScriptRoot '../agents/data-agent/deployment.binding.yaml') -Raw
-$lakehouseTemplate = Get-Content -LiteralPath (Join-Path $PSScriptRoot '../agents/lakehouse/templates/private-lakehouse-knowledge.topic.mcs.yml') -Raw
-$dataAgentTemplate = Get-Content -LiteralPath (Join-Path $PSScriptRoot '../agents/data-agent/templates/private-data-agent-tool.action.mcs.yml') -Raw
-if ($lakehouseSync -notmatch 'kind:\s*customKnowledge' -or $lakehouseSync -notmatch 'operationId:\s*knowledge' -or
-    $lakehouseSync -notmatch 'connectionMode:\s*Invoker' -or $lakehouseTemplate -notmatch 'OnKnowledgeRequested' -or
-    $lakehouseTemplate -notmatch 'System\.SearchResults') {
-    throw 'Lakehouse Copilot Studio agent must use the private OBO connector as a custom knowledge source.'
+$lakehouseTemplate = Get-Content -LiteralPath (Join-Path $PSScriptRoot '../agents/lakehouse/templates/private-lakehouse-knowledge.tool.mcs.yml') -Raw
+$dataAgentTemplate = Get-Content -LiteralPath (Join-Path $PSScriptRoot '../agents/data-agent/templates/private-data-agent-tool.tool.mcs.yml') -Raw
+if ($lakehouseSync -notmatch 'kind:\s*connectorTool' -or $lakehouseSync -notmatch 'operationId:\s*knowledge' -or
+    $lakehouseSync -notmatch 'connectionMode:\s*Invoker' -or $lakehouseTemplate -notmatch 'kind:\s*ConnectorTool' -or
+    $lakehouseTemplate -notmatch 'operationId:\s*knowledge' -or $lakehouseTemplate -notmatch 'authMode:\s*Invoker') {
+    throw 'Lakehouse Copilot Studio agent must use only the private OBO connector knowledge tool.'
 }
 if ($dataAgentSync -notmatch 'kind:\s*connectorTool' -or $dataAgentSync -notmatch 'operationId:\s*query' -or
-    $dataAgentSync -notmatch 'connectionMode:\s*Invoker' -or $dataAgentTemplate -notmatch 'InvokeConnectorTaskAction' -or
-    $dataAgentTemplate -notmatch 'operationId:\s*query' -or $dataAgentTemplate -notmatch 'mode:\s*Invoker') {
+    $dataAgentSync -notmatch 'connectionMode:\s*Invoker' -or $dataAgentTemplate -notmatch 'kind:\s*ConnectorTool' -or
+    $dataAgentTemplate -notmatch 'operationId:\s*query' -or $dataAgentTemplate -notmatch 'authMode:\s*Invoker') {
     throw 'Data Agent Copilot Studio agent must use only the private OBO connector query tool.'
 }
 Write-Host 'PASS Copilot Studio agent binding contracts'

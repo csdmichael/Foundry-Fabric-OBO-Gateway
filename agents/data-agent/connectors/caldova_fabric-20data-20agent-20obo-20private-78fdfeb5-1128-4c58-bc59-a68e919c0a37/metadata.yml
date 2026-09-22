@@ -1,0 +1,21 @@
+﻿{
+  "connectorid": "78fdfeb5-1128-4c58-bc59-a68e919c0a37",
+  "name": "caldova_fabric-20data-20agent-20obo-20private",
+  "displayname": "Fabric Data Agent OBO Private",
+  "description": "Queries the published Microsoft Fabric Data Agent through APIM with delegated OBO authorization.",
+  "connectorinternalid": "shared_fabric-20data-20agent-20obo-20private-5f29e467e-d34fd7d66fd7a912",
+  "openapidefinition": "connectors/caldova_fabric-20data-20agent-20obo-20private-78fdfeb5-1128-4c58-bc59-a68e919c0a37/openapidefinition.json",
+  "connectionparameters": "connectors/caldova_fabric-20data-20agent-20obo-20private-78fdfeb5-1128-4c58-bc59-a68e919c0a37/connectionparameters.json",
+  "connectionparametersets": null,
+  "policytemplateinstances": "connectors/caldova_fabric-20data-20agent-20obo-20private-78fdfeb5-1128-4c58-bc59-a68e919c0a37/policytemplateinstances.json",
+  "iconbrandcolor": "#0078D4",
+  "iconblob": "connectors/caldova_fabric-20data-20agent-20obo-20private-78fdfeb5-1128-4c58-bc59-a68e919c0a37/iconblob.png",
+  "connectortype": 1,
+  "statecode": 0,
+  "statuscode": 1,
+  "ismanaged": false,
+  "componentstate": 0,
+  "createdon": "2026-09-21T01:07:45Z",
+  "modifiedon": "2026-09-21T01:08:04Z",
+  "versionnumber": 3488099
+}

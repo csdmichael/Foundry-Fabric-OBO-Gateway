@@ -48,7 +48,7 @@ function ConvertTo-KnowledgeCell {
 function Write-KnowledgeFile {
     param(
         [Parameter(Mandatory = $true)] [string] $Path,
-        [Parameter(Mandatory = $true)] [string[]] $Lines
+        [Parameter(Mandatory = $true)] [AllowEmptyString()] [string[]] $Lines
     )
 
     $content = ($Lines -join "`n") + "`n"
@@ -254,7 +254,16 @@ $searchKey = az search admin-key show --service-name ([string]$knowledge.searchS
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($searchKey)) { throw 'Unable to retrieve the Azure AI Search admin key for synchronization.' }
 $syncState = 'requested'
 try {
-    $syncUri = "$([string]$knowledge.searchEndpoint)/knowledgesources/$([string]$knowledge.knowledgeSourceName)/synchronize?api-version=2026-08-01-preview"
+    $knowledgeSourceUri = "$([string]$knowledge.searchEndpoint)/knowledgesources/$([string]$knowledge.knowledgeSourceName)?api-version=2026-08-01-preview"
+    $knowledgeSourceResponse = Invoke-WebRequest -Method Get -Uri $knowledgeSourceUri -Headers @{'api-key' = $searchKey} -SkipHttpErrorCheck
+    if ([int]$knowledgeSourceResponse.StatusCode -ne 200) {
+        throw "Unable to read the Foundry IQ knowledge source: HTTP $([int]$knowledgeSourceResponse.StatusCode) $($knowledgeSourceResponse.Content)"
+    }
+    $indexerName = [string](($knowledgeSourceResponse.Content | ConvertFrom-Json).indexedOneLakeParameters.createdResources.indexer)
+    if ([string]::IsNullOrWhiteSpace($indexerName)) {
+        throw "Foundry IQ knowledge source '$([string]$knowledge.knowledgeSourceName)' has no generated indexer."
+    }
+    $syncUri = "$([string]$knowledge.searchEndpoint)/indexers/$([uri]::EscapeDataString($indexerName))/run?api-version=2026-04-01"
     $syncResponse = Invoke-WebRequest -Method Post -Uri $syncUri -Headers @{'api-key' = $searchKey} -SkipHttpErrorCheck
     if ([int]$syncResponse.StatusCode -eq 409) { $syncState = 'already-active' }
     elseif ([int]$syncResponse.StatusCode -notin @(200, 202, 204)) {

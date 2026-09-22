@@ -50,7 +50,7 @@ export function createDataAgentClient(config: BrokerConfig, request: typeof fetc
       sessionId = response.headers.get('mcp-session-id') ?? sessionId;
       const responseBody = await response.text();
       if (!response.ok) throw new BrokerError(response.status === 401 || response.status === 403 ? 403 : 502, 'data_agent_rejected');
-      if (notification && !responseBody.trim()) return {};
+      if (notification) return {};
       const payload = parseRpcResponse(response, responseBody);
       if (payload.error || !payload.result) throw new BrokerError(502, 'data_agent_failed');
       return payload.result;

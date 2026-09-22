@@ -73,6 +73,7 @@ Verify that the Data Agent is published and that all three assets are in the sam
 ## 2. Configure Lakehouse knowledge
 
 1. Put textual, JSON, or Markdown content under the Lakehouse `Files` area. OneLake knowledge sources do not index `Tables` or Delta Parquet directly.
+  For current operational rows, run `pwsh scripts/sync-parts-shortages-foundry-iq.ps1`; it publishes bounded Markdown batches from `bv.vw_part_shortage_360` under the configured snapshot path.
 2. Enable the Azure AI Search system-assigned identity.
 3. Grant that identity **Contributor** on the Fabric workspace.
 4. Grant the Search identity **Cognitive Services User** on the Foundry account when the knowledge base uses an LLM.
@@ -81,6 +82,8 @@ Verify that the Data Agent is published and that all three assets are in the sam
 7. Create a knowledge base referencing that source.
 8. Create a `RemoteTool` project connection to the knowledge-base MCP endpoint with `ProjectManagedIdentity` authentication.
 9. Attach only `knowledge_base_retrieve` plus Code Interpreter to the Lakehouse agent.
+
+The snapshot helper runs the generated OneLake indexer through `POST /indexers/{name}/run?api-version=2026-04-01`. Do not call `/knowledgesources/{name}/synchronize`; that route isn't supported by Azure AI Search.
 
 The implementation is in [scripts/foundry_knowledge.py](../scripts/foundry_knowledge.py) and [scripts/provision-foundry-agents.py](../scripts/provision-foundry-agents.py).
 
@@ -157,6 +160,8 @@ python scripts/create-sales-poc-agents.py
 
 The provisioning code is idempotent. An unchanged definition reuses the current version; a changed definition creates a new immutable version.
 
+Both instruction files include four domain-specific suggested prompts. Validate them by invoking each latest version with `What can you do?`.
+
 Expected definitions:
 
 | Agent | Expected attachment | Authentication |
@@ -208,6 +213,7 @@ python -m py_compile scripts/foundry_knowledge.py scripts/provision-foundry-agen
 | `unauthorized` | Grant the signed-in user access to the published Data Agent and every underlying data source. |
 | Data Agent not found | Publish it in Fabric and verify workspace/project tenant alignment. |
 | Foundry IQ 429 | Use a dedicated embedding deployment and `minimal` retrieval reasoning during heavy ingestion. |
+| Retrieval returns definitions but no current rows | Run `sync-parts-shortages-foundry-iq.ps1`, confirm the indexer processed the expected snapshot file count with zero failures, and invoke the latest agent version again. |
 
 ## Screenshot checklist
 

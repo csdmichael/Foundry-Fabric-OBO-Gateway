@@ -27,7 +27,7 @@ $agents = @(
         SchemaName = [string]$config.powerPlatform.lakehouseAgentSchemaName
         SolutionName = [string]$config.powerPlatform.lakehouseAgentSolutionName
         ConnectorName = [string]$config.powerPlatform.lakehouseConnectorName
-        RequiredPatterns = @('OnKnowledgeRequested', 'operationId:\s*knowledge', 'System\.SearchResults', 'ConnectionReferenceBySchema')
+        RequiredPatterns = @('kind:\s*ConnectorTool', 'authMode:\s*Invoker', 'operationId:\s*knowledge')
     },
     [pscustomobject]@{
         Kind = 'dataAgent'
@@ -35,7 +35,7 @@ $agents = @(
         SchemaName = [string]$config.powerPlatform.dataAgentAgentSchemaName
         SolutionName = [string]$config.powerPlatform.dataAgentAgentSolutionName
         ConnectorName = [string]$config.powerPlatform.dataAgentConnectorName
-        RequiredPatterns = @('InvokeConnectorTaskAction', 'operationId:\s*query', 'mode:\s*Invoker')
+        RequiredPatterns = @('kind:\s*ConnectorTool', 'authMode:\s*Invoker', 'operationId:\s*query')
     }
 )
 
@@ -54,12 +54,12 @@ function Assert-DesiredState {
         }
     }
 
-    $templatePath = Join-Path $agents[0].Directory 'templates/private-lakehouse-knowledge.topic.mcs.yml'
+    $templatePath = Join-Path $agents[0].Directory 'templates/private-lakehouse-knowledge.tool.mcs.yml'
     $template = Get-Content -LiteralPath $templatePath -Raw
     foreach ($pattern in $agents[0].RequiredPatterns) {
         if ($template -notmatch $pattern) { throw "Lakehouse knowledge template is missing '$pattern'." }
     }
-    $dataAgentTemplatePath = Join-Path $agents[1].Directory 'templates/private-data-agent-tool.action.mcs.yml'
+    $dataAgentTemplatePath = Join-Path $agents[1].Directory 'templates/private-data-agent-tool.tool.mcs.yml'
     $dataAgentTemplate = Get-Content -LiteralPath $dataAgentTemplatePath -Raw
     foreach ($pattern in $agents[1].RequiredPatterns) {
         if ($dataAgentTemplate -notmatch $pattern) { throw "Data Agent tool template is missing '$pattern'." }
@@ -92,17 +92,13 @@ function Assert-PacEnvironment {
 
 function Assert-PulledBindings {
     foreach ($agent in $agents) {
-        $connectionPath = Join-Path $agent.Directory 'connectionreferences.mcs.yml'
+        $connectionDirectory = Join-Path $agent.Directory 'infrastructure/connections'
         $connectionStatePath = Join-Path $agent.Directory '.mcs/conn.json'
-        if (-not (Test-Path -LiteralPath $connectionPath -PathType Leaf) -or -not (Test-Path -LiteralPath $connectionStatePath -PathType Leaf)) {
+        $connectionFiles = @(Get-ChildItem -LiteralPath $connectionDirectory -Filter '*.sync.yaml' -File -ErrorAction SilentlyContinue)
+        if ($connectionFiles.Count -eq 0 -or -not (Test-Path -LiteralPath $connectionStatePath -PathType Leaf)) {
             throw "Agent '$($agent.SchemaName)' must be bound in Copilot Studio and pulled before publication."
         }
-        $componentFiles = if ($agent.Kind -eq 'lakehouse') {
-            @(Get-ChildItem -LiteralPath (Join-Path $agent.Directory 'topics') -Filter '*.mcs.yml' -File -ErrorAction SilentlyContinue)
-        }
-        else {
-            @(Get-ChildItem -LiteralPath (Join-Path $agent.Directory 'actions') -Filter '*.mcs.yml' -File -ErrorAction SilentlyContinue)
-        }
+        $componentFiles = @(Get-ChildItem -LiteralPath (Join-Path $agent.Directory 'capabilities/tools') -Filter '*.mcs.yml' -File -ErrorAction SilentlyContinue)
         $content = ($componentFiles | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }) -join "`n"
         foreach ($pattern in $agent.RequiredPatterns) {
             if ($content -notmatch $pattern) {

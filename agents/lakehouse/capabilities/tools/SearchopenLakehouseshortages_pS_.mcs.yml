@@ -1,0 +1,8 @@
+mcs.metadata:
+  componentName: Search open Lakehouse shortages
+  description: Returns up to 15 citation-ready snippets under the signed-in user permissions.
+kind: ConnectorTool
+authMode: Invoker
+connectionReference: caldova_fabricPartsShortagesAnalyst.cr.shared_fabric-20lake.30ac7433f55a4675b57a58b2890a7583
+connectorId: /providers/Microsoft.PowerApps/apis/shared_fabric-20lakehouse-20obo-20private-5f29e467ef71-a3f88c180f25a030
+operationId: knowledge
