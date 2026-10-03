@@ -2,8 +2,45 @@
 
 Enterprise On-Behalf-Of (OBO) integration gateway connecting **Microsoft Foundry** prompt agents and **Microsoft Copilot Studio** conversational agents to **Microsoft Fabric** Lakehouse tables and Fabric Data Agents under caller-delegated Microsoft Entra ID identity.
 
+## Architecture at a Glance
+
+![Private Microsoft Foundry Agent and Fabric architecture options with OBO identity and private networking](docs/Foundry-Private-Fabric-OBO-Architecture-Options.png)
+
+The architecture keeps public network access disabled while preserving the user's Microsoft Entra identity from the Foundry agent through API Management (APIM) to Fabric. Choose the data path that matches the workload:
+
+| Option | Best for | How it works |
+| --- | --- | --- |
+| **Deterministic SQL through MCP** | Structured or tabular data where governed, repeatable SQL retrieval is required | The Foundry agent generates or validates T-SQL, APIM validates and forwards the delegated OBO token, and the Fabric SQL MCP endpoint executes a read-only query against OneLake-backed data. |
+| **Option A: Foundry IQ / Fabric IQ** | Semantic grounding over governed OneLake data, including business vocabulary and entity relationships | A Foundry IQ knowledge source uses a Fabric IQ ontology and governed OneLake bindings. Use this when semantic definitions and relationships should guide retrieval. |
+| **Option B: Azure AI Search** | Unstructured or semi-structured OneLake content requiring private indexed retrieval | OneLake content is privately ingested into Azure AI Search; the agent retrieves through a private endpoint with private DNS, managed identity, and RBAC. |
+| **Fabric Data Agent through Fabric IQ** | Natural-language analytics where Fabric Data Agent private networking is supported and configured | The agent uses Fabric Data Agent with tenant- and workspace-level private links. Confirm that the target tenant and region support the required private configuration before selecting this path. |
+
+Public-only integrations are intentionally excluded because they do not meet this architecture's private-network requirement. All supported options retain centralized authorization, least-privilege Fabric access, auditing, and governance.
+
+## Okta External User Architecture
+
+![External Okta users accessing their own Fabric data through APIM, Microsoft Foundry, and Fabric SQL MCP](docs/Foundry-Private-Fabric-OBO-Architecture-Okta.png)
+
+This pattern extends the private Fabric SQL path to external users who authenticate with Okta from voice, text, web, mobile, or Teams clients:
+
+1. The client signs in with Okta through OIDC/OAuth 2.0 and obtains an access token containing the required audience, scopes, and user claims.
+2. APIM validates the token signature, issuer, audience, expiry, scopes, and required claims. It then applies rate limits, CORS, and other gateway policies before forwarding the request and validated user context to the private Foundry endpoint.
+3. The Foundry agent handles voice or text interaction, grounds the request over Fabric data, and invokes the private Fabric SQL MCP tool.
+4. The MCP service obtains a Fabric-compatible delegated token through the configured identity federation/OBO exchange and submits a constrained SQL request to the private Fabric SQL endpoint.
+5. Fabric enforces workspace, SQL, and row-level permissions for the mapped user. The result returns through the same private backend path to the requesting client.
+
+### Okta Deployment Considerations
+
+- **Identity mapping is required.** Okta identities and claims must map to Microsoft Entra identities that are authorized in Fabric. An arbitrary Okta access token cannot be sent directly to Fabric or exchanged through Microsoft Entra OBO without the appropriate federation and token-exchange configuration.
+- **Keep the backend private.** Foundry, Fabric SQL MCP, the Fabric SQL endpoint, and OneLake use private endpoints and private DNS; public access to those services remains disabled.
+- **Choose the ingress deliberately.** Internet clients require a controlled public APIM gateway or another approved edge service. If APIM exposes only a private endpoint, clients must connect through VPN, ExpressRoute, or another private-access solution.
+- **Propagate identity, not trust.** APIM must validate the Okta token before forwarding normalized, allow-listed identity claims. Fabric remains the final authorization boundary and should enforce least privilege and row-level security.
+- **Use the SQL MCP route.** The recommended private path is **Okta user → APIM → Foundry → Fabric SQL MCP → Fabric OneLake**. Do not select a Fabric Data Agent path unless its networking and identity features satisfy the target tenant and region's private-access requirements.
+
 **Table of contents**
 
+- [Architecture at a glance](#architecture-at-a-glance)
+- [Okta external user architecture](#okta-external-user-architecture)
 - [Architecture overview](#architecture-overview)
 - [Repository structure](#repository-structure)
 - [Getting started](#getting-started)
