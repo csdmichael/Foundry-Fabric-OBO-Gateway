@@ -17,6 +17,12 @@
     "privateEndpointSubnetResourceId": {
       "value": "<deployment.json:network.brokerPrivateEndpointSubnetResourceId>"
     },
+    "ingressPrivateEndpointSubnetResourceId": {
+      "value": "<deployment.json:network.apimPrivateEndpointSubnetResourceId>"
+    },
+    "ingressPrivateEndpointLocation": {
+      "value": "<deployment.json:apim.location>"
+    },
     "integrationSubnetResourceId": {
       "value": "<deployment.json:network.brokerIntegrationSubnetResourceId>"
     },

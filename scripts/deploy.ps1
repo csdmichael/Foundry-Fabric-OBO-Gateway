@@ -296,6 +296,8 @@ function Get-BrokerParameters {
         existingPlanName = [string]$config.broker.existingPlanName
         brokerVnetResourceId = [string]$config.network.brokerVnetResourceId
         privateEndpointSubnetResourceId = [string]$config.network.brokerPrivateEndpointSubnetResourceId
+        ingressPrivateEndpointSubnetResourceId = [string]$config.network.apimPrivateEndpointSubnetResourceId
+        ingressPrivateEndpointLocation = [string]$config.apim.location
         integrationSubnetResourceId = [string]$config.network.brokerIntegrationSubnetResourceId
         existingWebPrivateDnsVnetLinkName = [string]$config.network.brokerExistingPrivateDnsVnetLinks.web
         existingBlobPrivateDnsVnetLinkName = [string]$config.network.brokerExistingPrivateDnsVnetLinks.blob
@@ -370,7 +372,7 @@ function Invoke-Preflight {
         }
     }
     $script:CurrentDeployerPrincipalId = Assert-FabricGuid -Value $script:CurrentDeployerPrincipalId -Name 'CurrentDeployerPrincipalId'
-    foreach ($resourceId in @($config.network.brokerVnetResourceId, $config.network.brokerPrivateEndpointSubnetResourceId, $config.network.brokerIntegrationSubnetResourceId)) {
+    foreach ($resourceId in @($config.network.brokerVnetResourceId, $config.network.brokerPrivateEndpointSubnetResourceId, $config.network.brokerIntegrationSubnetResourceId, $config.network.apimPrivateEndpointSubnetResourceId)) {
         az resource show --ids $resourceId --subscription $config.azure.subscriptionId --only-show-errors -o none
         if ($LASTEXITCODE -ne 0) { throw "Configured broker network resource is unavailable: $resourceId" }
     }

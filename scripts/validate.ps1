@@ -75,7 +75,7 @@ if (@($inferenceApiIds | Select-Object -Unique).Count -ne 2 -or @($agentNames | 
 if ($config.broker.runtime -ne '~22') {
     throw 'Broker must use Node 22.'
 }
-foreach ($path in 'network.brokerVnetResourceId', 'network.brokerPrivateEndpointSubnetResourceId', 'network.brokerIntegrationSubnetResourceId', 'network.apimVnetResourceId', 'foundry.vnetResourceId', 'foundry.privateEndpointSubnetResourceId') {
+foreach ($path in 'network.brokerVnetResourceId', 'network.brokerPrivateEndpointSubnetResourceId', 'network.brokerIntegrationSubnetResourceId', 'network.apimVnetResourceId', 'network.apimPrivateEndpointSubnetResourceId', 'foundry.vnetResourceId', 'foundry.privateEndpointSubnetResourceId') {
     $resourceId = [string](Get-FabricConfigValue -Config $config -Path $path)
     if ($resourceId -notmatch '^/subscriptions/[0-9a-f-]+/resourceGroups/[^/]+/providers/Microsoft\.Network/virtualNetworks/[^/]+(?:/subnets/[^/]+)?$') {
         throw "$path is not a valid virtual network or subnet resource ID."

@@ -10,6 +10,8 @@ locals {
   existing_plan_name                    = local.config.broker.existingPlanName
   broker_vnet_resource_id               = local.config.network.brokerVnetResourceId
   private_endpoint_subnet_id            = local.config.network.brokerPrivateEndpointSubnetResourceId
+  ingress_private_endpoint_subnet_id    = local.config.network.apimPrivateEndpointSubnetResourceId
+  ingress_private_endpoint_location     = local.config.apim.location
   integration_subnet_id                 = local.config.network.brokerIntegrationSubnetResourceId
   allowed_user_object_ids               = length(var.allowed_user_object_ids) > 0 ? var.allowed_user_object_ids : tolist(local.config.identity.allowedUserObjectIds)
   node_version                          = local.config.broker.runtime
@@ -110,7 +112,7 @@ data "azurecaf_name" "private_endpoint" {
 
   name          = local.function_app_name
   resource_type = "azurerm_private_endpoint"
-  suffixes      = [each.key]
+  suffixes      = each.key == "sites" ? ["apim", "sites"] : [each.key]
   clean_input   = true
 }
 
@@ -519,9 +521,9 @@ resource "azurerm_private_endpoint" "function" {
   count = var.deploy_function ? 1 : 0
 
   name                = data.azurecaf_name.private_endpoint["sites"].result
-  location            = local.location
+  location            = local.ingress_private_endpoint_location
   resource_group_name = data.azurerm_resource_group.broker.name
-  subnet_id           = local.private_endpoint_subnet_id
+  subnet_id           = local.ingress_private_endpoint_subnet_id
   tags                = local.tags
 
   private_service_connection {

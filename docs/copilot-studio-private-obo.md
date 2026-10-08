@@ -43,6 +43,8 @@ flowchart LR
 
 The Power Platform VNet enterprise policy supplies network reachability to private APIM. The custom connector supplies delegated OAuth. Both are required.
 
+The broker separates inbound and outbound private networking. Its `sites` private endpoint is placed in `network.apimPrivateEndpointSubnetResourceId` so APIM reaches the Function over its local VNet. Storage, Key Vault, and Function outbound integration remain in the broker VNet.
+
 ## Prerequisites
 
 1. A Managed Power Platform environment with Dataverse.
@@ -321,6 +323,7 @@ Operation policies only rewrite fixed routes:
 | Connector exists but OBO consent never appears | Verify `EnableOnbehalfOfLogin=True`, delegated permissions, and user credentials. |
 | Connector fails with `exchange_rejected` | Validate the broker Key Vault reference, resource API credential, and downstream delegated grants. |
 | Private APIM times out | Verify the Power Platform enterprise policy link and APIM private DNS. |
+| APIM returns `503` after about 50 seconds and the Function records no invocation | Verify the broker `sites` private endpoint is approved in the APIM VNet, its private DNS A record resolves to that endpoint, and APIM outbound VNet integration is `Succeeded`. If all three are correct, capture APIM request/dependency operation IDs and escalate the Standard v2 gateway connectivity failure to Microsoft. |
 | Lakehouse tool returns `404` | Verify the deployed Function App exposes `/api/lakehouse/knowledge`; rebuild/upload the broker package and restart the app if source and runtime differ. |
 | Lakehouse tool returns no citations | Verify `/knowledge` returns `results[].snippet/title/url` and that the agent cites the returned title and URL. |
 | Data Agent does not appear | Publish the Fabric Data Agent and verify tenant, workspace access, and active Fabric capacity. |

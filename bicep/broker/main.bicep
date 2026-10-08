@@ -17,6 +17,12 @@ param brokerVnetResourceId string
 @description('Existing private endpoint subnet resource ID from network.brokerPrivateEndpointSubnetResourceId.')
 param privateEndpointSubnetResourceId string
 
+@description('Existing APIM-side private endpoint subnet resource ID from network.apimPrivateEndpointSubnetResourceId.')
+param ingressPrivateEndpointSubnetResourceId string
+
+@description('Azure region of the APIM-side private endpoint subnet.')
+param ingressPrivateEndpointLocation string
+
 @description('Existing Function VNet integration subnet resource ID from network.brokerIntegrationSubnetResourceId.')
 param integrationSubnetResourceId string
 
@@ -177,7 +183,7 @@ var storageAccountName = take('st${compactAppName}${uniqueSuffix}', 24)
 var keyVaultName = take('kv-${functionAppName}-${uniqueSuffix}', 24)
 var logAnalyticsWorkspaceName = take('log-${functionAppName}', 63)
 var applicationInsightsName = take('appi-${functionAppName}', 260)
-var functionPrivateEndpointName = take('pe-${functionAppName}-sites', 64)
+var functionPrivateEndpointName = take('pe-${functionAppName}-apim-sites', 64)
 var blobPrivateEndpointName = take('pe-${functionAppName}-blob', 64)
 var tablePrivateEndpointName = take('pe-${functionAppName}-table', 64)
 var vaultPrivateEndpointName = take('pe-${functionAppName}-vault', 64)
@@ -854,7 +860,7 @@ resource functionDiagnosticSetting 'Microsoft.Insights/diagnosticSettings@2021-0
 
 resource functionPrivateEndpoint 'Microsoft.Network/privateEndpoints@2024-05-01' = if (deployFunction) {
   name: functionPrivateEndpointName
-  location: location
+  location: ingressPrivateEndpointLocation
   tags: tags
   properties: {
     privateLinkServiceConnections: [
@@ -869,7 +875,7 @@ resource functionPrivateEndpoint 'Microsoft.Network/privateEndpoints@2024-05-01'
       }
     ]
     subnet: {
-      id: privateEndpointSubnetResourceId
+      id: ingressPrivateEndpointSubnetResourceId
     }
   }
 }
