@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -14,6 +16,56 @@ from azure.ai.projects.models import (
 CONNECTION_API_VERSION = "2025-10-01-preview"
 FABRIC_CONNECTION_API_VERSION = "2025-04-01-preview"
 KNOWLEDGE_BASE_API_VERSION = "2026-08-01-preview"
+
+
+def load_private_mcp_connections(
+    metadata_path: Path,
+    foundry_config: dict[str, Any],
+    gateway_url: str,
+) -> dict[str, dict[str, str]]:
+    document = json.loads(metadata_path.read_text(encoding="utf-8-sig"))
+    if document.get("schemaVersion") != 1 or document.get("status") != "ready":
+        raise ValueError("Foundry private MCP connection checkpoint is not ready.")
+
+    connections = document.get("connections")
+    if not isinstance(connections, list):
+        raise ValueError("Foundry private MCP connection checkpoint has no connection list.")
+
+    expected_kinds = {"lakehouse", "dataAgent"}
+    by_kind: dict[str, dict[str, str]] = {}
+    for connection in connections:
+        kind = connection.get("kind")
+        if kind not in expected_kinds or kind in by_kind:
+            raise ValueError("Foundry private MCP connections must contain each agent kind exactly once.")
+        config = foundry_config["mcpConnections"][kind]
+        expected_target = f"{gateway_url.rstrip('/')}/{config['apiPath'].lstrip('/')}"
+        if (
+            connection.get("name") != config["name"]
+            or connection.get("target") != expected_target
+            or not connection.get("id")
+        ):
+            raise ValueError(f"Foundry private MCP connection '{kind}' does not match deployment config.")
+        by_kind[kind] = connection
+
+    if set(by_kind) != expected_kinds:
+        raise ValueError("Foundry private MCP connections must contain lakehouse and dataAgent.")
+    return by_kind
+
+
+def build_private_mcp_tool(
+    connection: dict[str, str],
+    server_label: str,
+    allowed_tools: list[str],
+) -> MCPTool:
+    if not allowed_tools:
+        raise ValueError("Private MCP tool allowlist cannot be empty.")
+    return MCPTool(
+        server_label=server_label,
+        server_url=connection["target"],
+        project_connection_id=connection["id"],
+        allowed_tools=allowed_tools,
+        require_approval="never",
+    )
 
 
 def knowledge_base_mcp_endpoint(search_endpoint: str, knowledge_base_name: str) -> str:

@@ -12,6 +12,15 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'config.ps1')
 
 $config = Get-FabricDeploymentConfig -Path $ConfigPath
+$configFingerprint = Get-FabricConfigFingerprint -Path $ConfigPath
+$resolvedIdentityPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($IdentityPath)
+if (-not (Test-Path -LiteralPath $resolvedIdentityPath -PathType Leaf)) {
+    throw "Identity metadata not found: $resolvedIdentityPath"
+}
+$identity = Get-Content -LiteralPath $resolvedIdentityPath -Raw | ConvertFrom-Json
+if ($identity.schemaVersion -ne 1 -or $identity.configFingerprint -ne $configFingerprint) {
+    throw 'Identity metadata does not match the active deployment configuration.'
+}
 $environmentId = Assert-FabricGuid -Value $config.powerPlatform.environmentId -Name 'powerPlatform.environmentId'
 $environmentUrl = [string]$config.powerPlatform.environmentUrl
 if ($environmentUrl -notmatch '^https://[a-z0-9-]+\.crm\d*\.dynamics\.com/?$') {
@@ -51,6 +60,36 @@ function Assert-DesiredState {
         if ($settings -notmatch [regex]::Escape($agent.SchemaName) -or $binding -notmatch 'schemaVersion:\s*1' -or
             $binding -notmatch [regex]::Escape($agent.ConnectorName) -or $binding -notmatch 'connectionMode:\s*Invoker') {
             throw "Copilot Studio desired-state contract is invalid for '$($agent.Kind)'."
+        }
+
+        $connectorDirectories = @(Get-ChildItem -LiteralPath (Join-Path $agent.Directory 'connectors') -Directory)
+        $connectionFiles = @(Get-ChildItem -LiteralPath (Join-Path $agent.Directory 'infrastructure/connections') -Filter '*.sync.yaml' -File)
+        $toolFiles = @(Get-ChildItem -LiteralPath (Join-Path $agent.Directory 'capabilities/tools') -Filter '*.mcs.yml' -File)
+        if ($connectorDirectories.Count -ne 1 -or $connectionFiles.Count -ne 1 -or $toolFiles.Count -ne 1) {
+            throw "Agent '$($agent.Kind)' must contain exactly one private connector, connection reference, and tool binding."
+        }
+
+        $connectorDirectory = $connectorDirectories[0].FullName
+        $metadata = Get-Content -LiteralPath (Join-Path $connectorDirectory 'metadata.yml') -Raw | ConvertFrom-Json
+        $connectionParameters = Get-Content -LiteralPath (Join-Path $connectorDirectory 'connectionparameters.json') -Raw | ConvertFrom-Json
+        $openApi = Get-Content -LiteralPath (Join-Path $connectorDirectory 'openapidefinition.json') -Raw | ConvertFrom-Json
+        $connectionReference = Get-Content -LiteralPath $connectionFiles[0].FullName -Raw
+        $tool = Get-Content -LiteralPath $toolFiles[0].FullName -Raw
+        $toolConnectorId = [regex]::Match($tool, '(?m)^\s*connectorId:\s*(\S+)\s*$').Groups[1].Value
+        $referenceConnectorId = [regex]::Match($connectionReference, '(?m)^\s*connectorId:\s*(\S+)\s*$').Groups[1].Value
+        $oauth = $connectionParameters.token.oAuthSettings
+        $expectedAuthorizationUrl = "https://login.microsoftonline.com/$($config.powerPlatform.tenantId)/oauth2/authorize"
+        $expectedTokenUrl = "https://login.microsoftonline.com/$($config.powerPlatform.tenantId)/oauth2/token"
+        if ([string]$metadata.displayname -ne $agent.ConnectorName -or
+            $tool -notmatch '(?m)^\s*authMode:\s*Invoker\s*$' -or
+            [string]::IsNullOrWhiteSpace($toolConnectorId) -or $toolConnectorId -ne $referenceConnectorId -or
+            [string]$oauth.customParameters.TenantId.value -ne [string]$config.powerPlatform.tenantId -or
+            [string]$oauth.customParameters.ResourceUri.value -ne "api://$($identity.resourceApi.clientId)" -or
+            [string]$oauth.customParameters.EnableOnbehalfOfLogin.value -ne 'true' -or
+            @($oauth.scopes) -notcontains [string]$config.identity.delegatedScope -or
+            [string]$openApi.securityDefinitions.oauth2.authorizationUrl -ne $expectedAuthorizationUrl -or
+            [string]$openApi.securityDefinitions.oauth2.tokenUrl -ne $expectedTokenUrl) {
+            throw "Agent '$($agent.Kind)' is not bound to the configured private invoker/OBO connector and tenant."
         }
     }
 

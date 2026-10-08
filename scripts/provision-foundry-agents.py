@@ -9,10 +9,8 @@ from azure.identity import AzureCliCredential
 
 from foundry_evaluations import load_evaluation_cases, run_managed_evaluation
 from foundry_knowledge import (
-    build_fabric_data_agent_tool,
-    build_foundry_iq_capabilities,
-    ensure_fabric_data_agent_connection,
-    ensure_foundry_iq_connection,
+    build_private_mcp_tool,
+    load_private_mcp_connections,
 )
 
 
@@ -34,17 +32,17 @@ def create_agent(project: AIProjectClient, name: str, definition: PromptAgentDef
     raise RuntimeError("agent_create_retry_exhausted")
 
 
-def smoke_test(project: AIProjectClient, agent_name: str) -> None:
+def smoke_test(project: AIProjectClient, agent_name: str, prompt: str) -> None:
     for attempt in range(6):
         try:
             with project.get_openai_client(agent_name=agent_name) as openai:
                 conversation = openai.conversations.create()
                 response = openai.responses.create(
                     conversation=conversation.id,
-                    input="Reply with exactly READY. Do not call tools.",
+                    input=prompt,
                 )
-                if response.output_text.strip().upper() != "READY":
-                    raise RuntimeError("unexpected_smoke_response")
+                if not response.output_text.strip():
+                    raise RuntimeError("empty_tool_smoke_response")
                 return
         except Exception as error:
             if attempt == 5 or not retryable(error):
@@ -87,11 +85,10 @@ def main() -> None:
     config = json.loads(config_path.read_text(encoding="utf-8-sig"))
     foundry = config["foundry"]
     project_endpoint = f"https://{foundry['accountName']}.services.ai.azure.com/api/projects/{foundry['projectName']}"
-    project_resource_id = (
-        f"/subscriptions/{config['azure']['subscriptionId']}"
-        f"/resourceGroups/{config['azure']['resourceGroup']}"
-        f"/providers/Microsoft.CognitiveServices/accounts/{foundry['accountName']}"
-        f"/projects/{foundry['projectName']}"
+    private_connections = load_private_mcp_connections(
+        Path(args.connections).resolve(),
+        foundry,
+        config["apim"]["gatewayUrl"],
     )
     output_path = Path(args.output).resolve()
     evaluation_dataset_path = (
@@ -107,12 +104,14 @@ def main() -> None:
             "name": foundry["agents"]["lakehouse"],
             "model": f"{foundry['modelConnections']['lakehouse']}/{foundry['model']['name']}",
             "instructions": root / "agents" / "foundry" / "lakehouse-instructions.md",
+            "smokePrompt": "List the visible Lakehouse tables. Use the tables tool and do not guess.",
         },
         {
             "kind": "dataAgent",
             "name": foundry["agents"]["dataAgent"],
             "model": f"{foundry['modelConnections']['dataAgent']}/{foundry['model']['name']}",
             "instructions": root / "agents" / "foundry" / "data-agent-instructions.md",
+            "smokePrompt": "Summarize current open shortage exposure by severity. Use the query tool.",
         },
     ]
 
@@ -124,34 +123,14 @@ def main() -> None:
     ) as project:
         with project.get_openai_client() as evaluation_openai:
             for item in definitions:
-                if item["kind"] == "lakehouse":
-                    knowledge_config = foundry["knowledgeBases"]["lakehouse"]
-                    connection = ensure_foundry_iq_connection(
-                        credential=credential,
-                        project_resource_id=project_resource_id,
-                        connection_name=knowledge_config["connectionName"],
-                        search_endpoint=knowledge_config["searchEndpoint"],
-                        knowledge_base_name=knowledge_config["knowledgeBaseName"],
-                    )
-                    tools, knowledge_source = build_foundry_iq_capabilities(
-                        connection_id=connection["id"],
-                        search_endpoint=knowledge_config["searchEndpoint"],
-                        knowledge_base_name=knowledge_config["knowledgeBaseName"],
-                        server_label=knowledge_config["serverLabel"],
-                    )
-                    tool_names = ["foundry_iq_knowledge", "code_interpreter"]
-                else:
-                    data_agent_config = foundry["fabricDataAgent"]
-                    connection = ensure_fabric_data_agent_connection(
-                        credential=credential,
-                        project_resource_id=project_resource_id,
-                        connection_name=data_agent_config["connectionName"],
-                        workspace_id=config["fabric"]["workspaceId"],
-                        artifact_id=config["fabric"]["dataAgentId"],
-                    )
-                    tools = [build_fabric_data_agent_tool(connection["id"])]
-                    knowledge_source = None
-                    tool_names = ["fabric_dataagent_preview"]
+                connection_config = foundry["mcpConnections"][item["kind"]]
+                connection = private_connections[item["kind"]]
+                tools = [build_private_mcp_tool(
+                    connection=connection,
+                    server_label=connection_config["serverLabel"],
+                    allowed_tools=connection_config["allowedTools"],
+                )]
+                tool_names = list(connection_config["allowedTools"])
                 agent = create_agent(
                     project,
                     item["name"],
@@ -168,21 +147,18 @@ def main() -> None:
                     "version": agent.version,
                     "model": item["model"],
                     "tools": tool_names,
-                    "knowledgeSource": knowledge_source,
+                    "connectionMode": "OAuth2",
+                    "privateMcpConnectionId": connection["id"],
                     "smokeTest": "pending",
                     "evaluation": {
                         "dataset": evaluation_dataset_path.name,
                         "status": "pending",
                     },
                 }
-                if knowledge_source:
-                    result["knowledgeConnectionId"] = connection["id"]
-                else:
-                    result["fabricConnectionId"] = connection["id"]
                 results.append(result)
                 write_checkpoint(output_path, project_endpoint, foundry, results, "in-progress")
                 if not args.skip_smoke_test:
-                    smoke_test(project, agent.name)
+                    smoke_test(project, agent.name, item["smokePrompt"])
                 result["smokeTest"] = "skipped" if args.skip_smoke_test else "passed"
                 if not isinstance(agent.version, (str, int)) or not str(agent.version).strip():
                     raise RuntimeError(f"unexpected_agent_version_type:{type(agent.version).__name__}")

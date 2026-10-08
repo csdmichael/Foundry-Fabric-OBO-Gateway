@@ -1,4 +1,6 @@
 import unittest
+import json
+import re
 from pathlib import Path
 
 
@@ -52,6 +54,74 @@ class AgentSafetyContractTests(unittest.TestCase):
                 self.assertIn(f"use the {component_name.lower()} tool", settings)
                 self.assertNotIn("executive powerpoint", settings)
                 self.assertNotIn("code interpreter", settings)
+
+    def test_foundry_agents_require_private_delegated_mcp_tools(self):
+        contracts = {
+            "lakehouse": ("private fabric lakehouse mcp", "`tables`", "`query`", "delegated permissions"),
+            "data-agent": ("private fabric data agent mcp", "`query`", "delegated permissions"),
+        }
+        for agent_name, requirements in contracts.items():
+            with self.subTest(agent=agent_name):
+                instructions = (
+                    ROOT / "agents" / "foundry" / f"{agent_name}-instructions.md"
+                ).read_text(encoding="utf-8").lower()
+                for requirement in requirements:
+                    self.assertIn(requirement, instructions)
+                self.assertNotIn("foundry iq", instructions)
+                self.assertNotIn("microsoft fabric data agent tool", instructions)
+
+    def test_copilot_connectors_are_invoker_obo_and_use_configured_tenant(self):
+        config = json.loads((ROOT / "config" / "deployment.json").read_text(encoding="utf-8-sig"))
+        contracts = {
+            "lakehouse": (
+                "Fabric Lakehouse OBO Private",
+                "knowledge",
+                ROOT / "agents" / "lakehouse",
+            ),
+            "dataAgent": (
+                "Fabric Data Agent OBO Private",
+                "query",
+                ROOT / "agents" / "data-agent",
+            ),
+        }
+        for kind, (display_name, operation_id, agent_root) in contracts.items():
+            with self.subTest(agent=kind):
+                connector_root = next((agent_root / "connectors").iterdir())
+                metadata = json.loads((connector_root / "metadata.yml").read_text(encoding="utf-8-sig"))
+                parameters = json.loads(
+                    (connector_root / "connectionparameters.json").read_text(encoding="utf-8-sig")
+                )
+                openapi = json.loads(
+                    (connector_root / "openapidefinition.json").read_text(encoding="utf-8-sig")
+                )
+                tool = next((agent_root / "capabilities" / "tools").glob("*.mcs.yml")).read_text(
+                    encoding="utf-8"
+                )
+                reference = next(
+                    (agent_root / "infrastructure" / "connections").glob("*.sync.yaml")
+                ).read_text(encoding="utf-8")
+                tool_connector_id = re.search(r"(?m)^connectorId:\s*(\S+)\s*$", tool).group(1)
+                reference_connector_id = re.search(
+                    r"(?m)^\s*connectorId:\s*(\S+)\s*$", reference
+                ).group(1)
+                oauth = parameters["token"]["oAuthSettings"]
+                tenant_id = config["powerPlatform"]["tenantId"]
+
+                self.assertEqual(metadata["displayname"], display_name)
+                self.assertIn("authMode: Invoker", tool)
+                self.assertIn(f"operationId: {operation_id}", tool)
+                self.assertEqual(tool_connector_id, reference_connector_id)
+                self.assertEqual(oauth["customParameters"]["TenantId"]["value"], tenant_id)
+                self.assertRegex(
+                    oauth["customParameters"]["ResourceUri"]["value"],
+                    r"^api://[0-9a-f-]{36}$",
+                )
+                self.assertEqual(oauth["scopes"], [config["identity"]["delegatedScope"]])
+                self.assertTrue(oauth["properties"]["IsOnbehalfofLoginSupported"])
+                self.assertEqual(
+                    openapi["securityDefinitions"]["oauth2"]["authorizationUrl"],
+                    f"https://login.microsoftonline.com/{tenant_id}/oauth2/authorize",
+                )
 
     def test_foundry_iac_enforces_content_safety_and_evaluation_rbac(self):
         iac_paths = (

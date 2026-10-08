@@ -1,4 +1,6 @@
 import sys
+import json
+import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -10,6 +12,8 @@ from foundry_knowledge import (
     build_foundry_iq_capabilities,
     ensure_fabric_data_agent_connection,
     ensure_foundry_iq_connection,
+    build_private_mcp_tool,
+    load_private_mcp_connections,
 )
 
 
@@ -46,6 +50,86 @@ class FakeHttpClient:
 
 
 class FoundryKnowledgeTests(unittest.TestCase):
+    def test_loads_only_ready_private_mcp_connections_matching_config(self):
+        foundry_config = {
+            "mcpConnections": {
+                "lakehouse": {
+                    "name": "lakehouse-mcp-oauth",
+                    "apiPath": "fabric-lakehouse-mcp/mcp",
+                },
+                "dataAgent": {
+                    "name": "data-agent-mcp-oauth",
+                    "apiPath": "fabric-data-agent-mcp/mcp",
+                },
+            },
+        }
+        checkpoint = {
+            "schemaVersion": 1,
+            "status": "ready",
+            "connections": [
+                {
+                    "kind": "lakehouse",
+                    "id": "/projects/p/connections/lakehouse-mcp-oauth",
+                    "name": "lakehouse-mcp-oauth",
+                    "target": "https://gateway.azure-api.net/fabric-lakehouse-mcp/mcp",
+                },
+                {
+                    "kind": "dataAgent",
+                    "id": "/projects/p/connections/data-agent-mcp-oauth",
+                    "name": "data-agent-mcp-oauth",
+                    "target": "https://gateway.azure-api.net/fabric-data-agent-mcp/mcp",
+                },
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "connections.json"
+            path.write_text(json.dumps(checkpoint), encoding="utf-8")
+            connections = load_private_mcp_connections(
+                path,
+                foundry_config,
+                "https://gateway.azure-api.net",
+            )
+
+        self.assertEqual(set(connections), {"lakehouse", "dataAgent"})
+        self.assertEqual(connections["dataAgent"]["name"], "data-agent-mcp-oauth")
+
+    def test_rejects_private_mcp_connection_for_wrong_tenant_target(self):
+        foundry_config = {
+            "mcpConnections": {
+                "lakehouse": {"name": "lakehouse", "apiPath": "lakehouse/mcp"},
+                "dataAgent": {"name": "data-agent", "apiPath": "data-agent/mcp"},
+            },
+        }
+        checkpoint = {
+            "schemaVersion": 1,
+            "status": "ready",
+            "connections": [
+                {"kind": "lakehouse", "id": "one", "name": "lakehouse", "target": "https://wrong.example/mcp"},
+                {"kind": "dataAgent", "id": "two", "name": "data-agent", "target": "https://gateway.azure-api.net/data-agent/mcp"},
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "connections.json"
+            path.write_text(json.dumps(checkpoint), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "does not match deployment config"):
+                load_private_mcp_connections(path, foundry_config, "https://gateway.azure-api.net")
+
+    def test_builds_private_oauth_mcp_tool_with_least_privilege_allowlist(self):
+        tool = build_private_mcp_tool(
+            {
+                "id": "/projects/p/connections/lakehouse",
+                "target": "https://gateway.azure-api.net/lakehouse/mcp",
+            },
+            "fabric-lakehouse",
+            ["tables", "query"],
+        )
+
+        self.assertEqual(tool.type, "mcp")
+        self.assertEqual(tool.project_connection_id, "/projects/p/connections/lakehouse")
+        self.assertEqual(tool.server_url, "https://gateway.azure-api.net/lakehouse/mcp")
+        self.assertEqual(tool.allowed_tools, ["tables", "query"])
+        self.assertEqual(tool.require_approval, "never")
+
     def test_creates_native_fabric_data_agent_connection(self):
         client = FakeHttpClient()
 
